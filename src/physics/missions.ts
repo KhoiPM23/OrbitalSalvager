@@ -175,6 +175,66 @@ export const ORBITAL_MISSIONS: MissionData[] = [
         scoreValue: 2200
       }
     ]
+  },
+
+  // MISSION 5: THE BINARY PULSARS
+  {
+    id: 'mission-5',
+    missionNumber: 5,
+    name: 'MISSION 05: THE BINARY PULSARS',
+    subtitle: 'Extreme 3-body gravitational orbital salvage in a dual pulsar vortex.',
+    description: 'Two co-orbiting micro-pulsars create a chaotic gravitational field! Retrieve the 50t Hyper-Density Dark Matter Core and emergency fuel cells caught between the twin singularities.',
+    initialFuel: 90,
+    shipSpawn: { x: 200, y: 350 },
+    recoveryBay: { x: 960, y: 80, width: 180, height: 160 },
+    asteroids: [
+      { id: 'ast-bin-1', x: 260, y: 160, radius: 44, sides: 6 },
+      { id: 'ast-bin-2', x: 880, y: 520, radius: 52, sides: 7 }
+    ],
+    gravityWells: [
+      {
+        id: 'pulsar-alpha',
+        x: 480,
+        y: 280,
+        mass: 22000,
+        radius: 30,
+        color: '#06b6d4'
+      },
+      {
+        id: 'pulsar-beta',
+        x: 720,
+        y: 460,
+        mass: 24000,
+        radius: 32,
+        color: '#a855f7'
+      }
+    ],
+    salvageItems: [
+      {
+        id: 'salvage-fuel-bin',
+        name: 'STABILIZED DEUTERIUM CELL',
+        type: 'FUEL_POD',
+        mass: 16,
+        radius: 17,
+        color: '#ffaa00',
+        initialPos: { x: 380, y: 540 },
+        initialVel: { x: 0.2, y: -0.2 },
+        isSalvaged: false,
+        scoreValue: 1400
+      },
+      {
+        id: 'salvage-dark-core',
+        name: 'HYPER-DENSITY DARK CORE',
+        type: 'CORE',
+        mass: 50,
+        radius: 26,
+        color: '#c084fc',
+        initialPos: { x: 600, y: 370 },
+        initialVel: { x: 0.1, y: 0.25 },
+        isSalvaged: false,
+        scoreValue: 3000
+      }
+    ]
   }
 ];
 

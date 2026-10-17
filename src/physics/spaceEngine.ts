@@ -216,6 +216,50 @@ export class SpaceEngine {
     return this.currentMission.gravityWells || [];
   }
 
+  public predictTrajectory(steps = 70, dt = 1.2): Array<{ x: number; y: number }> {
+    const points: Array<{ x: number; y: number }> = [];
+    if (!this.shipBody) return points;
+
+    let px = this.shipBody.position.x;
+    let py = this.shipBody.position.y;
+    let vx = this.shipBody.velocity.x;
+    let vy = this.shipBody.velocity.y;
+
+    const gravityWells = this.currentMission.gravityWells || [];
+    const airFriction = 0.998;
+
+    for (let i = 0; i < steps; i++) {
+      for (const gw of gravityWells) {
+        const dx = gw.x - px;
+        const dy = gw.y - py;
+        const distSq = dx * dx + dy * dy;
+        const dist = Math.sqrt(distSq);
+
+        if (dist > 15 && dist < gw.radius) {
+          const force = (gw.mass / (distSq + 500)) * 0.00008;
+          vx += (dx / dist) * force * dt;
+          vy += (dy / dist) * force * dt;
+        }
+      }
+
+      vx *= airFriction;
+      vy *= airFriction;
+
+      px += vx * dt;
+      py += vy * dt;
+
+      if (px < 0 || px > this.arenaWidth || py < 0 || py > this.arenaHeight) {
+        break;
+      }
+
+      if (i % 2 === 0) {
+        points.push({ x: px, y: py });
+      }
+    }
+
+    return points;
+  }
+
   public pollEvents(): GameEvent[] {
 
     const list = [...this.eventsQueue];

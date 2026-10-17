@@ -174,7 +174,13 @@ describe('OrbitalSalvager 2D Physics & Tether System', () => {
     expect(engine.getMissionIndex()).toBe(3);
     expect(engine.getGravityWells().length).toBe(1);
 
-    // Cannot advance past mission 4
+    // Advance to mission 5 (The Binary Pulsars)
+    const advancedTo5 = engine.nextMission();
+    expect(advancedTo5).toBe(true);
+    expect(engine.getMissionIndex()).toBe(4);
+    expect(engine.getGravityWells().length).toBe(2);
+
+    // Cannot advance past mission 5
     const cannotAdvance = engine.nextMission();
     expect(cannotAdvance).toBe(false);
   });
@@ -224,5 +230,31 @@ describe('OrbitalSalvager 2D Physics & Tether System', () => {
     // Manually trigger collision handler through engine update with wall contact
     // Or check hull state after running update cycles
     expect(engine.getShipState().hull).toBe(100);
+  });
+
+  it('should calculate predicted slingshot trajectory path points ahead of ship', () => {
+    const engine = new SpaceEngine(1200, 800, 3); // Mission 4 with gravity well
+    const ship = engine.getShipBody();
+    Matter.Body.setVelocity(ship, { x: 2.0, y: 1.0 });
+
+    const trajectory = engine.predictTrajectory(40, 1.0);
+    expect(trajectory.length).toBeGreaterThan(10);
+    expect(trajectory[0].x).toBeGreaterThan(ship.position.x);
+  });
+
+  it('should initialize Mission 5 The Binary Pulsars with dual gravity anomalies', () => {
+    const engine = new SpaceEngine(1200, 800, 4); // Mission 5
+    expect(engine.getMissionIndex()).toBe(4);
+    expect(engine.getTotalMissions()).toBe(5);
+    expect(engine.getCurrentMission().name).toContain('MISSION 05: THE BINARY PULSARS');
+
+    const wells = engine.getGravityWells();
+    expect(wells.length).toBe(2);
+    expect(wells[0].id).toBe('pulsar-alpha');
+    expect(wells[1].id).toBe('pulsar-beta');
+
+    const salvage = engine.getSalvageBodies();
+    expect(salvage.size).toBe(2);
+    expect(salvage.get('salvage-dark-core')?.item.mass).toBe(50);
   });
 });

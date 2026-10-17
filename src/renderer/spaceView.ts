@@ -155,20 +155,28 @@ export class SpaceView {
       this.drawSalvageItem(ctx, entry.body.position, entry.item);
     }
 
-    // 8. Flight Trajectory Vector (Prograde Line)
-    const speed = Math.hypot(shipBody.velocity.x, shipBody.velocity.y);
-    if (speed > 0.2) {
+    // 8. Flight Trajectory & Gravitational Slingshot Curve
+    const trajectory = engine.predictTrajectory(60, 1.2);
+    if (trajectory.length > 2) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(0, 229, 255, 0.4)';
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 6]);
       ctx.beginPath();
       ctx.moveTo(shipBody.position.x, shipBody.position.y);
-      ctx.lineTo(
-        shipBody.position.x + shipBody.velocity.x * 24,
-        shipBody.position.y + shipBody.velocity.y * 24
-      );
+      for (const pt of trajectory) {
+        ctx.lineTo(pt.x, pt.y);
+      }
       ctx.stroke();
+
+      // Slingshot trajectory apex indicator
+      const lastPt = trajectory[trajectory.length - 1];
+      ctx.fillStyle = '#00e5ff';
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(lastPt.x, lastPt.y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
 

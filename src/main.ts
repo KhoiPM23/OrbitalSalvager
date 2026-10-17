@@ -97,7 +97,21 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (isPaused) return;
+  // Quick mission jump [1]..[5]
+  if (e.key >= '1' && e.key <= '5') {
+    const idx = parseInt(e.key, 10) - 1;
+    if (idx < engine.getTotalMissions()) {
+      e.preventDefault();
+      engine.loadMission(idx);
+      modalBrief.classList.add('hidden');
+      modalWin.classList.add('hidden');
+      modalDefeat.classList.add('hidden');
+      modalAllComplete.classList.add('hidden');
+      isGameRunning = true;
+      syncMissionUI();
+      return;
+    }
+  }
 
   keys[e.key.toLowerCase()] = true;
 

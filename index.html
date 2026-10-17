@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OrbitalSalvager — Deep Space Momentum & Tether Salvage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: #04060a;
+      color: #94a3b8;
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .cockpit-wrapper {
+      max-width: 1220px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background: rgba(14, 22, 38, 0.85);
+      border: 1px solid #1e293b;
+      backdrop-filter: blur(8px);
+      border-radius: 8px;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      color: #00ffaa;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(0, 255, 170, 0.4);
+    }
+
+    .telemetry-bar {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .gauge-card {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 110px;
+    }
+
+    .gauge-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .gauge-track {
+      height: 8px;
+      background: #101726;
+      border: 1px solid #1e293b;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .gauge-fill {
+      height: 100%;
+      width: 100%;
+      transition: width 0.05s linear;
+    }
+
+    .btn {
+      background: #141d2b;
+      border: 1px solid #2d3f5e;
+      color: #cbd5e1;
+      padding: 6px 14px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #1e2c42;
+      color: #00e5ff;
+      border-color: #00e5ff;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+    }
+
+    .viewport-box {
+      position: relative;
+      width: 1200px;
+      height: 800px;
+      border: 2px solid #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 16px 64px rgba(0, 0, 0, 0.9);
+    }
+
+    #spaceCanvas {
+      display: block;
+      width: 1200px;
+      height: 800px;
+      background: #060911;
+    }
+
+    /* In-game HUD overlay */
+    .hud-overlay {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .hud-pill {
+      background: rgba(6, 9, 17, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(6px);
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Modal dialogs */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(4, 6, 10, 0.88);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 20px;
+    }
+
+    .modal-box {
+      max-width: 520px;
+      background: #0e1524;
+      border: 2px solid #00ffaa;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 0 40px rgba(0, 255, 170, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: center;
+    }
+
+    .modal-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: #00ffaa;
+    }
+
+    .modal-body {
+      font-size: 14px;
+      color: #94a3b8;
+      line-height: 1.6;
+      text-align: left;
+    }
+
+    .key-tag {
+      background: #1e293b;
+      color: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+      border: 1px solid #334155;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="cockpit-wrapper">
+    <header>
+      <div class="title-group">
+        <span class="brand-title">ORBITAL SALVAGER</span>
+        <button id="btnHelp" class="btn" style="font-size: 11px;">FLIGHT MANUAL</button>
+      </div>
+
+      <div class="telemetry-bar">
+        <div class="gauge-card">
+          <div class="gauge-label">
+            <span>FUEL</span>
+            <span id="fuelText">100%</span>
+          </div>
+          <div class="gauge-track">
+            <div id="fuelBar" class="gauge-fill" style="background: #ffaa00; width: 100%;"></div>
+          </div>
+        </div>
+
+        <div class="gauge-card">
+          <div class="gauge-label">
+            <span>HULL INTEGRITY</span>
+            <span id="hullText">100%</span>
+          </div>
+          <div class="gauge-track">
+            <div id="hullBar" class="gauge-fill" style="background: #00ffaa; width: 100%;"></div>
+          </div>
+        </div>
+
+        <button id="btnRestart" class="btn">RESET SECTOR [R]</button>
+      </div>
+    </header>
+
+    <div class="viewport-box">
+      <div class="hud-overlay">
+        <div class="hud-pill">
+          <span style="color: #64748b;">TETHER STATUS:</span>
+          <span id="tetherStatus" style="color: #00e5ff;">DISENGAGED (READY)</span>
+        </div>
+        <div class="hud-pill">
+          <span style="color: #64748b;">SALVAGE TARGETS:</span>
+          <span id="salvageCounter" style="color: #00ffaa;">0 / 3 SECURED</span>
+        </div>
+        <div class="hud-pill">
+          <span style="color: #64748b;">SECTOR SCORE:</span>
+          <span id="scoreText" style="color: #f1f5f9; font-weight: 700;">0 PTS</span>
+        </div>
+      </div>
+
+      <canvas id="spaceCanvas" width="1200" height="800"></canvas>
+
+      <!-- Mission Briefing Modal -->
+      <div id="modalBrief" class="modal-backdrop">
+        <div class="modal-box">
+          <div class="modal-title">ORBITAL RECOVERY DIRECTIVE</div>
+          <div class="modal-body">
+            You command an industrial salvage tug in low-Earth orbit. Debris in Sector 4 must be captured and hauled to the Mothership <strong>Recovery Bay</strong>.
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00e5ff;">
+              <div>• <span class="key-tag">W</span> / <span class="key-tag">↑</span>: Main Forward Thrusters (Consumes Fuel)</div>
+              <div>• <span class="key-tag">A</span> / <span class="key-tag">D</span> / <span class="key-tag">←</span> <span class="key-tag">→</span>: RCS Lateral Rotation</div>
+              <div>• <span class="key-tag">S</span> / <span class="key-tag">↓</span>: Retro-thruster Brake</div>
+              <div>• <span class="key-tag">SPACE</span>: Fire / Release Grapple Tether</div>
+            </div>
+
+            <strong>Salvage Targets:</strong><br>
+            1. <strong>Titanium Reactor Core</strong> (Heavy mass)<br>
+            2. <strong>Fuel Pod</strong> (Provides +40% fuel on recovery!)<br>
+            3. <strong>Comm Relay</strong> (Lightweight orbital antenna)
+
+            <p style="margin-top: 8px; font-size: 12px; color: #64748b;">Caution: Asteroid collisions cause severe hull damage. Excessive tether tension will snap the cable!</p>
+          </div>
+          <button id="btnStartGame" class="btn" style="background: #00ffaa; color: #04060a; font-weight: 900; align-self: center; padding: 10px 28px;">
+            LAUNCH TUG
+          </button>
+        </div>
+      </div>
+
+      <!-- Victory Modal -->
+      <div id="modalWin" class="modal-backdrop hidden">
+        <div class="modal-box" style="border-color: #00ffaa;">
+          <div class="modal-title">SECTOR CLEAR // MISSION SUCCESS</div>
+          <div class="modal-body" style="text-align: center;">
+            <p style="font-size: 16px; color: #f1f5f9; margin-bottom: 8px;">All 3 salvage items safely docked in the Recovery Bay!</p>
+            <p id="winScoreText" style="color: #00e5ff; font-weight: 700; font-size: 18px;">FINAL SCORE: 0 PTS</p>
+          </div>
+          <button id="btnPlayAgain" class="btn" style="background: #00ffaa; color: #04060a; font-weight: 900; align-self: center; padding: 10px 28px;">
+            RUN NEXT SALVAGE CONTRACT
+          </button>
+        </div>
+      </div>
+
+      <!-- Failure Modal -->
+      <div id="modalDefeat" class="modal-backdrop hidden">
+        <div class="modal-box" style="border-color: #ff4444;">
+          <div class="modal-title" style="color: #ff4444;">MISSION FAILED</div>
+          <div class="modal-body" style="text-align: center;">
+            <p id="defeatReason" style="font-size: 16px; color: #f87171; margin-bottom: 8px;">Hull compromised!</p>
+            <p style="color: #64748b;">The recovery tug was lost in deep space.</p>
+          </div>
+          <button id="btnRetryDefeat" class="btn" style="background: #ff4444; color: #04060a; font-weight: 900; align-self: center; padding: 10px 28px;">
+            RETRY SECTOR
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

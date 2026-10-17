@@ -21,6 +21,15 @@ export interface AsteroidHazard {
   sides: number;
 }
 
+export interface GravityAnomaly {
+  id: string;
+  x: number;
+  y: number;
+  mass: number;
+  radius: number;
+  color?: string;
+}
+
 export interface MissionData {
   id: string;
   missionNumber: number;
@@ -32,7 +41,9 @@ export interface MissionData {
   recoveryBay: { x: number; y: number; width: number; height: number };
   asteroids: AsteroidHazard[];
   salvageItems: SalvageItem[];
+  gravityWells?: GravityAnomaly[];
 }
+
 
 export interface ShipState {
   fuel: number; // 0 to 100

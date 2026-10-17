@@ -168,10 +168,35 @@ describe('OrbitalSalvager 2D Physics & Tether System', () => {
     expect(advancedAgain).toBe(true);
     expect(engine.getMissionIndex()).toBe(2);
 
-    // Cannot advance past last mission
+    // Advance to mission 4 (Singularity Horizon)
+    const advancedTo4 = engine.nextMission();
+    expect(advancedTo4).toBe(true);
+    expect(engine.getMissionIndex()).toBe(3);
+    expect(engine.getGravityWells().length).toBe(1);
+
+    // Cannot advance past mission 4
     const cannotAdvance = engine.nextMission();
     expect(cannotAdvance).toBe(false);
   });
+
+  it('should apply gravitational acceleration towards singularity gravity well in Mission 4', () => {
+    const engine = new SpaceEngine(1200, 800, 3); // Load Mission 4
+    const ship = engine.getShipBody();
+    const wells = engine.getGravityWells();
+    expect(wells.length).toBe(1);
+
+    const well = wells[0];
+    // Position ship near well to test gravitational pull
+    Matter.Body.setPosition(ship, { x: well.x - 120, y: well.y });
+    Matter.Body.setVelocity(ship, { x: 0, y: 0 });
+
+    // Step simulation
+    engine.update(50);
+
+    // Velocity X should now be positive (pulled towards well.x at +120px)
+    expect(ship.velocity.x).toBeGreaterThan(0);
+  });
+
 
   it('should support pause and resume', () => {
     const engine = new SpaceEngine();

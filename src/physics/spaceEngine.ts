@@ -1,6 +1,7 @@
 import Matter from 'matter-js';
 import { ORBITAL_MISSIONS } from './missions';
-import { AsteroidHazard, GameEvent, GameStatus, MissionData, MissionMetrics, SalvageItem, ShipState } from './types';
+import { AsteroidHazard, GameEvent, GameStatus, GravityAnomaly, MissionData, MissionMetrics, SalvageItem, ShipState } from './types';
+
 
 const { Engine, World, Bodies, Body, Constraint, Vector, Events } = Matter;
 
@@ -211,7 +212,12 @@ export class SpaceEngine {
     return this.currentMission.recoveryBay;
   }
 
+  public getGravityWells(): GravityAnomaly[] {
+    return this.currentMission.gravityWells || [];
+  }
+
   public pollEvents(): GameEvent[] {
+
     const list = [...this.eventsQueue];
     this.eventsQueue = [];
     return list;
@@ -331,7 +337,39 @@ export class SpaceEngine {
   public update(deltaMs = 16.66): void {
     if (this.gameStatus !== 'PLAYING') return;
 
+    // Apply Gravitational Field Pull from anomalies
+    if (this.currentMission.gravityWells) {
+      const shipPos = this.shipBody.position;
+      for (const well of this.currentMission.gravityWells) {
+        // Gravitational pull on Spacecraft
+        const dx = well.x - shipPos.x;
+        const dy = well.y - shipPos.y;
+        const distSq = dx * dx + dy * dy;
+        const dist = Math.sqrt(distSq) || 1;
+        const forceMag = (0.00018 * well.mass) / (distSq + 3000);
+        Body.applyForce(this.shipBody, shipPos, {
+          x: (dx / dist) * forceMag,
+          y: (dy / dist) * forceMag
+        });
+
+        // Gravitational pull on Salvage Items
+        for (const entry of this.salvageBodies.values()) {
+          if (entry.item.isSalvaged) continue;
+          const sx = well.x - entry.body.position.x;
+          const sy = well.y - entry.body.position.y;
+          const sDistSq = sx * sx + sy * sy;
+          const sDist = Math.sqrt(sDistSq) || 1;
+          const sForce = (0.00018 * well.mass * (entry.body.mass / 12)) / (sDistSq + 3000);
+          Body.applyForce(entry.body, entry.body.position, {
+            x: (sx / sDist) * sForce,
+            y: (sy / sDist) * sForce
+          });
+        }
+      }
+    }
+
     Engine.update(this.engine, deltaMs);
+
 
     this.shipState.isThrusting = false;
     this.shipState.isTurningLeft = false;

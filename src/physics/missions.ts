@@ -123,5 +123,58 @@ export const ORBITAL_MISSIONS: MissionData[] = [
         scoreValue: 1000
       }
     ]
+  },
+
+  // MISSION 4: SECTOR DELTA (Climax Black Hole Singularity)
+  {
+    id: 'mission-4',
+    missionNumber: 4,
+    name: 'MISSION 04: SINGULARITY HORIZON',
+    subtitle: 'Gravitational slingshot maneuver around a micro-black-hole anomaly.',
+    description: 'A dark matter core and high-yield fuel cell are caught in a gravitational anomaly! Slingshot around the gravity well, tow the cargo with your tether, and escape the gravitational pull into the Recovery Bay.',
+    initialFuel: 85,
+    shipSpawn: { x: 320, y: 680 },
+    recoveryBay: { x: 100, y: 100, width: 170, height: 170 },
+    asteroids: [
+      { id: 'ast-sing-1', x: 440, y: 260, radius: 48, sides: 6 },
+      { id: 'ast-sing-2', x: 880, y: 560, radius: 54, sides: 5 }
+    ],
+    gravityWells: [
+      {
+        id: 'singularity-core',
+        x: 640,
+        y: 400,
+        mass: 26000,
+        radius: 34,
+        color: '#ec4899'
+      }
+    ],
+    salvageItems: [
+      {
+        id: 'salvage-antimatter',
+        name: 'VOLATILE ANTIMATTER CELL',
+        type: 'FUEL_POD',
+        mass: 18,
+        radius: 18,
+        color: '#ffaa00',
+        initialPos: { x: 500, y: 490 },
+        initialVel: { x: 0.35, y: 0.15 },
+        isSalvaged: false,
+        scoreValue: 1200
+      },
+      {
+        id: 'salvage-sing-core',
+        name: 'SINGULARITY POWER CORE',
+        type: 'CORE',
+        mass: 42,
+        radius: 24,
+        color: '#00e5ff',
+        initialPos: { x: 840, y: 280 },
+        initialVel: { x: -0.35, y: -0.2 },
+        isSalvaged: false,
+        scoreValue: 2200
+      }
+    ]
   }
 ];
+

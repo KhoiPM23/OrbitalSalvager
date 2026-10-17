@@ -1,12 +1,19 @@
 import Matter from 'matter-js';
-import { GameEvent, GameStatus, SalvageItem, ShipState } from './types';
+import { ORBITAL_MISSIONS } from './missions';
+import { AsteroidHazard, GameEvent, GameStatus, MissionData, MissionMetrics, SalvageItem, ShipState } from './types';
 
 const { Engine, World, Bodies, Body, Constraint, Vector, Events } = Matter;
 
 export class SpaceEngine {
   private engine: Matter.Engine;
-  private shipBody: Matter.Body;
+  private currentMissionIndex = 0;
+  private currentMission: MissionData;
+
+  private shipBody!: Matter.Body;
   private salvageBodies: Map<string, { body: Matter.Body; item: SalvageItem }> = new Map();
+  private asteroidBodies: Matter.Body[] = [];
+  private boundaryWalls: Matter.Body[] = [];
+
   private tetherConstraint: Matter.Constraint | null = null;
   private attachedItemId: string | null = null;
 
@@ -26,98 +33,36 @@ export class SpaceEngine {
   };
 
   private gameStatus: GameStatus = 'PLAYING';
-  private recoveryBay = { x: 120, y: 120, width: 150, height: 150 };
   private eventsQueue: GameEvent[] = [];
+  private missionStartTime = performance.now();
 
-  constructor(arenaWidth = 1200, arenaHeight = 800) {
+  private arenaWidth: number;
+  private arenaHeight: number;
+
+  constructor(arenaWidth = 1200, arenaHeight = 800, initialMission = 0) {
+    this.arenaWidth = arenaWidth;
+    this.arenaHeight = arenaHeight;
+
     this.engine = Engine.create({
       gravity: { x: 0, y: 0, scale: 0 }
     });
 
-    // 1. Ship
-    this.shipBody = Bodies.polygon(600, 500, 3, 18, {
-      mass: 8,
-      frictionAir: 0.012,
-      restitution: 0.2,
-      label: 'ship'
-    });
-    // Align forward facing
-    Body.setAngle(this.shipBody, -Math.PI / 2);
+    this.currentMissionIndex = Math.max(0, Math.min(ORBITAL_MISSIONS.length - 1, initialMission));
+    this.currentMission = JSON.parse(JSON.stringify(ORBITAL_MISSIONS[this.currentMissionIndex]));
 
-    // 2. Boundary walls
-    const wallThick = 40;
-    const walls = [
-      Bodies.rectangle(arenaWidth / 2, -wallThick / 2, arenaWidth, wallThick, { isStatic: true, label: 'wall' }),
-      Bodies.rectangle(arenaWidth / 2, arenaHeight + wallThick / 2, arenaWidth, wallThick, { isStatic: true, label: 'wall' }),
-      Bodies.rectangle(-wallThick / 2, arenaHeight / 2, wallThick, arenaHeight, { isStatic: true, label: 'wall' }),
-      Bodies.rectangle(arenaWidth + wallThick / 2, arenaHeight / 2, wallThick, arenaHeight, { isStatic: true, label: 'wall' })
-    ];
+    this.setupCollisionHandlers();
+    this.loadMission(this.currentMissionIndex);
+  }
 
-    // 3. Asteroid Hazards
-    const asteroid1 = Bodies.polygon(450, 280, 6, 45, { isStatic: true, label: 'asteroid' });
-    const asteroid2 = Bodies.polygon(850, 420, 5, 55, { isStatic: true, label: 'asteroid' });
-
-    // 4. Salvage Items
-    const items: SalvageItem[] = [
-      {
-        id: 'salvage-core',
-        name: 'TITANIUM REACTOR CORE',
-        type: 'CORE',
-        mass: 38,
-        radius: 20,
-        color: '#00e5ff',
-        initialPos: { x: 950, y: 200 },
-        initialVel: { x: -0.4, y: 0.2 },
-        isSalvaged: false,
-        scoreValue: 1200
-      },
-      {
-        id: 'salvage-fuel',
-        name: 'VOLATILE FUEL CELL POD',
-        type: 'FUEL_POD',
-        mass: 18,
-        radius: 16,
-        color: '#ffaa00',
-        initialPos: { x: 350, y: 650 },
-        initialVel: { x: 0.3, y: -0.2 },
-        isSalvaged: false,
-        scoreValue: 800
-      },
-      {
-        id: 'salvage-relay',
-        name: 'COMMUNICATION SATELLITE DISH',
-        type: 'RELAY',
-        mass: 10,
-        radius: 14,
-        color: '#a855f7',
-        initialPos: { x: 800, y: 680 },
-        initialVel: { x: -0.2, y: -0.3 },
-        isSalvaged: false,
-        scoreValue: 600
-      }
-    ];
-
-    World.add(this.engine.world, [this.shipBody, ...walls, asteroid1, asteroid2]);
-
-    items.forEach((item) => {
-      const b = Bodies.circle(item.initialPos.x, item.initialPos.y, item.radius, {
-        mass: item.mass,
-        frictionAir: 0.005,
-        restitution: 0.4,
-        label: `salvage-${item.id}`
-      });
-      Body.setVelocity(b, item.initialVel);
-      World.add(this.engine.world, b);
-      this.salvageBodies.set(item.id, { body: b, item });
-    });
-
-    // Collision listener for damage
+  private setupCollisionHandlers(): void {
     Events.on(this.engine, 'collisionStart', (evt) => {
+      if (this.gameStatus !== 'PLAYING') return;
+
       for (const pair of evt.pairs) {
         if (pair.bodyA === this.shipBody || pair.bodyB === this.shipBody) {
           const speed = Vector.magnitude(this.shipBody.velocity);
           if (speed > 1.2) {
-            const damage = Math.round(speed * 4.5);
+            const damage = Math.round(speed * 4.2);
             this.shipState.hull = Math.max(0, this.shipState.hull - damage);
             this.eventsQueue.push({
               type: 'COLLISION_DAMAGE',
@@ -135,6 +80,101 @@ export class SpaceEngine {
     });
   }
 
+  public loadMission(index: number): void {
+    if (index < 0 || index >= ORBITAL_MISSIONS.length) return;
+
+    this.cutTether();
+
+    // 1. Clear previous world bodies
+    World.clear(this.engine.world, false);
+    this.salvageBodies.clear();
+    this.asteroidBodies = [];
+    this.boundaryWalls = [];
+
+    // 2. Clone mission data
+    this.currentMissionIndex = index;
+    this.currentMission = JSON.parse(JSON.stringify(ORBITAL_MISSIONS[this.currentMissionIndex]));
+    const mission = this.currentMission;
+
+    // 3. Rebuild Ship
+    this.shipBody = Bodies.polygon(mission.shipSpawn.x, mission.shipSpawn.y, 3, 18, {
+      mass: 8,
+      frictionAir: 0.012,
+      restitution: 0.2,
+      label: 'ship'
+    });
+    Body.setAngle(this.shipBody, -Math.PI / 2);
+
+    // 4. Boundary Walls
+    const wallThick = 40;
+    const w = this.arenaWidth;
+    const h = this.arenaHeight;
+    this.boundaryWalls = [
+      Bodies.rectangle(w / 2, -wallThick / 2, w, wallThick, { isStatic: true, label: 'wall' }),
+      Bodies.rectangle(w / 2, h + wallThick / 2, w, wallThick, { isStatic: true, label: 'wall' }),
+      Bodies.rectangle(-wallThick / 2, h / 2, wallThick, h, { isStatic: true, label: 'wall' }),
+      Bodies.rectangle(w + wallThick / 2, h / 2, wallThick, h, { isStatic: true, label: 'wall' })
+    ];
+
+    // 5. Asteroids
+    for (const ast of mission.asteroids) {
+      const b = Bodies.polygon(ast.x, ast.y, ast.sides, ast.radius, {
+        isStatic: true,
+        label: `asteroid-${ast.id}`
+      });
+      this.asteroidBodies.push(b);
+    }
+
+    // 6. Salvage items
+    const salvageList: Matter.Body[] = [];
+    for (const item of mission.salvageItems) {
+      const b = Bodies.circle(item.initialPos.x, item.initialPos.y, item.radius, {
+        mass: item.mass,
+        frictionAir: 0.005,
+        restitution: 0.4,
+        label: `salvage-${item.id}`
+      });
+      Body.setVelocity(b, item.initialVel);
+      this.salvageBodies.set(item.id, { body: b, item });
+      salvageList.push(b);
+    }
+
+    // Add all to World
+    World.add(this.engine.world, [this.shipBody, ...this.boundaryWalls, ...this.asteroidBodies, ...salvageList]);
+
+    // Reset state
+    this.shipState.fuel = mission.initialFuel;
+    this.shipState.maxFuel = 100;
+    this.shipState.hull = 100;
+    this.shipState.maxHull = 100;
+    this.shipState.tetherAttachedToId = null;
+    this.shipState.tetherLength = 0;
+    this.shipState.tetherTension = 0;
+
+    this.gameStatus = 'PLAYING';
+    this.missionStartTime = performance.now();
+  }
+
+  public getCurrentMission(): Readonly<MissionData> {
+    return this.currentMission;
+  }
+
+  public getMissionIndex(): number {
+    return this.currentMissionIndex;
+  }
+
+  public getTotalMissions(): number {
+    return ORBITAL_MISSIONS.length;
+  }
+
+  public nextMission(): boolean {
+    if (this.currentMissionIndex < ORBITAL_MISSIONS.length - 1) {
+      this.loadMission(this.currentMissionIndex + 1);
+      return true;
+    }
+    return false;
+  }
+
   public getShipBody(): Matter.Body {
     return this.shipBody;
   }
@@ -147,8 +187,20 @@ export class SpaceEngine {
     return this.gameStatus;
   }
 
+  public setPaused(paused: boolean): void {
+    if (paused && this.gameStatus === 'PLAYING') {
+      this.gameStatus = 'PAUSED';
+    } else if (!paused && this.gameStatus === 'PAUSED') {
+      this.gameStatus = 'PLAYING';
+    }
+  }
+
   public getSalvageBodies(): Map<string, { body: Matter.Body; item: SalvageItem }> {
     return this.salvageBodies;
+  }
+
+  public getAsteroidHazards(): AsteroidHazard[] {
+    return this.currentMission.asteroids;
   }
 
   public getTetherConstraint(): Matter.Constraint | null {
@@ -156,13 +208,29 @@ export class SpaceEngine {
   }
 
   public getRecoveryBay(): { x: number; y: number; width: number; height: number } {
-    return this.recoveryBay;
+    return this.currentMission.recoveryBay;
   }
 
   public pollEvents(): GameEvent[] {
     const list = [...this.eventsQueue];
     this.eventsQueue = [];
     return list;
+  }
+
+  public getMetrics(): MissionMetrics {
+    const salvaged = Array.from(this.salvageBodies.values()).filter(v => v.item.isSalvaged).length;
+    const elapsed = (performance.now() - this.missionStartTime) / 1000;
+
+    return {
+      missionNumber: this.currentMission.missionNumber,
+      missionName: this.currentMission.name,
+      score: this.shipState.score,
+      fuelRemaining: Math.round(this.shipState.fuel),
+      hullRemaining: Math.round(this.shipState.hull),
+      salvagedCount: salvaged,
+      totalItems: this.salvageBodies.size,
+      timeElapsedSeconds: Math.round(elapsed)
+    };
   }
 
   // Controls
@@ -172,8 +240,7 @@ export class SpaceEngine {
     this.shipState.isThrusting = true;
     this.shipState.fuel = Math.max(0, this.shipState.fuel - 0.07);
 
-    // Thrust vector in facing angle direction
-    const angle = this.shipBody.angle + Math.PI / 2; // ship nose offset
+    const angle = this.shipBody.angle + Math.PI / 2;
     const forceMagnitude = 0.0035;
     const force = {
       x: Math.cos(angle) * forceMagnitude,
@@ -212,15 +279,13 @@ export class SpaceEngine {
   public toggleTether(): boolean {
     if (this.gameStatus !== 'PLAYING') return false;
 
-    // If already attached, cut it
     if (this.tetherConstraint) {
       this.cutTether();
       return false;
     }
 
-    // Find closest unsalvaged item in range (< 260px)
     let closestId: string | null = null;
-    let closestDist = 260;
+    let closestDist = 280;
 
     for (const [id, entry] of this.salvageBodies.entries()) {
       if (entry.item.isSalvaged) continue;
@@ -268,13 +333,12 @@ export class SpaceEngine {
 
     Engine.update(this.engine, deltaMs);
 
-    // Reset continuous frame inputs
     this.shipState.isThrusting = false;
     this.shipState.isTurningLeft = false;
     this.shipState.isTurningRight = false;
     this.shipState.isBraking = false;
 
-    // Calculate tether tension
+    // Calculate tether tension & snapping
     if (this.tetherConstraint && this.attachedItemId) {
       const target = this.salvageBodies.get(this.attachedItemId);
       if (target) {
@@ -282,7 +346,6 @@ export class SpaceEngine {
         const stretch = Math.max(0, currentDist - this.shipState.tetherLength);
         this.shipState.tetherTension = Math.min(1.0, stretch / 120);
 
-        // Snap constraint if stretched beyond breaking point (> 220px stretch)
         if (stretch > 220) {
           this.cutTether();
           this.eventsQueue.push({ type: 'TETHER_CUT', message: 'TETHER SNAPPED UNDER EXCESS TENSION!' });
@@ -291,34 +354,26 @@ export class SpaceEngine {
     }
 
     // Check Recovery Bay docking for salvage items
-    const rx = this.recoveryBay.x;
-    const ry = this.recoveryBay.y;
-    const rw = this.recoveryBay.width;
-    const rh = this.recoveryBay.height;
-
+    const bay = this.currentMission.recoveryBay;
     for (const [id, entry] of this.salvageBodies.entries()) {
       if (entry.item.isSalvaged) continue;
 
       const pos = entry.body.position;
       const speed = Vector.magnitude(entry.body.velocity);
 
-      if (pos.x >= rx && pos.x <= rx + rw && pos.y >= ry && pos.y <= ry + rh) {
-        if (speed < 2.0) {
-          // Successfully secured!
+      if (pos.x >= bay.x && pos.x <= bay.x + bay.width && pos.y >= bay.y && pos.y <= bay.y + bay.height) {
+        if (speed < 2.2) {
           entry.item.isSalvaged = true;
           this.shipState.score += entry.item.scoreValue;
 
-          // Fuel bonus for fuel pod
           if (entry.item.type === 'FUEL_POD') {
             this.shipState.fuel = Math.min(100, this.shipState.fuel + 40);
           }
 
-          // Disengage tether if this was attached
           if (this.attachedItemId === id) {
             this.cutTether();
           }
 
-          // Freeze and remove from active physics
           Body.setVelocity(entry.body, { x: 0, y: 0 });
           Body.setStatic(entry.body, true);
 
@@ -350,22 +405,6 @@ export class SpaceEngine {
   }
 
   public reset(): void {
-    this.cutTether();
-    Body.setPosition(this.shipBody, { x: 600, y: 500 });
-    Body.setVelocity(this.shipBody, { x: 0, y: 0 });
-    Body.setAngle(this.shipBody, -Math.PI / 2);
-    Body.setAngularVelocity(this.shipBody, 0);
-
-    this.shipState.fuel = 100;
-    this.shipState.hull = 100;
-    this.shipState.score = 0;
-    this.gameStatus = 'PLAYING';
-
-    for (const entry of this.salvageBodies.values()) {
-      entry.item.isSalvaged = false;
-      Body.setStatic(entry.body, false);
-      Body.setPosition(entry.body, entry.item.initialPos);
-      Body.setVelocity(entry.body, entry.item.initialVel);
-    }
+    this.loadMission(this.currentMissionIndex);
   }
 }

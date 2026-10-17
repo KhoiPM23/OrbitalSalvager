@@ -3,6 +3,7 @@ class SpaceAudioEngine {
   private thrusterGain: GainNode | null = null;
   private thrusterSource: AudioBufferSourceNode | null = null;
   private isThrustingSoundActive = false;
+  private isMuted = false;
 
   private init(): AudioContext {
     if (!this.ctx) {
@@ -15,6 +16,18 @@ class SpaceAudioEngine {
     return this.ctx;
   }
 
+  public setMute(muted: boolean): boolean {
+    this.isMuted = muted;
+    if (this.isMuted) {
+      this.stopThruster();
+    }
+    return this.isMuted;
+  }
+
+  public isAudioMuted(): boolean {
+    return this.isMuted;
+  }
+
   public ensureAudio(): void {
     try {
       this.init();
@@ -24,7 +37,7 @@ class SpaceAudioEngine {
   }
 
   public startThruster(): void {
-    if (this.isThrustingSoundActive) return;
+    if (this.isMuted || this.isThrustingSoundActive) return;
     try {
       const ctx = this.init();
       const bufferSize = ctx.sampleRate;
@@ -74,6 +87,7 @@ class SpaceAudioEngine {
   }
 
   public playRcs(): void {
+    if (this.isMuted) return;
     try {
       const ctx = this.init();
       const osc = ctx.createOscillator();
@@ -96,6 +110,7 @@ class SpaceAudioEngine {
   }
 
   public playTetherLatch(): void {
+    if (this.isMuted) return;
     try {
       const ctx = this.init();
       const osc = ctx.createOscillator();
@@ -118,6 +133,7 @@ class SpaceAudioEngine {
   }
 
   public playTetherCut(): void {
+    if (this.isMuted) return;
     try {
       const ctx = this.init();
       const osc = ctx.createOscillator();
@@ -140,6 +156,7 @@ class SpaceAudioEngine {
   }
 
   public playSalvageDocked(): void {
+    if (this.isMuted) return;
     try {
       const ctx = this.init();
       const notes = [587.33, 739.99, 880.0, 1174.66]; // D5, F#5, A5, D6
@@ -165,6 +182,7 @@ class SpaceAudioEngine {
   }
 
   public playCollision(): void {
+    if (this.isMuted) return;
     try {
       const ctx = this.init();
       const osc = ctx.createOscillator();

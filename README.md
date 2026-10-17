@@ -1,47 +1,66 @@
 # OrbitalSalvager — 2D Momentum & Tether Salvage
 
-A 2D physics-based space recovery game built around inertial momentum, Matter.js spring-constraint cable mechanics, and zero-gravity thruster navigation.
+A tactical 2D physics-based space recovery game built around Newtonian inertia, Matter.js spring-constraint cable dynamics, and zero-gravity thruster navigation.
 
 ![OrbitalSalvager](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)
-![Tests](https://img.shields.io/badge/Tests-4%2F4%20Passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/Tests-11%2F11%20Passing-brightgreen.svg)
 
 ---
 
-## 🚀 The Mission
+## 🚀 Game Overview
 
-Pilot an industrial recovery tug in Low Earth Orbit. Secure valuable derelict wreckage floating in Sector 4 and tow each object into the Mothership's **Recovery Bay**:
+Pilot an industrial salvage tug in Low Earth Orbit across 3 distinct hazard sectors. Grapple derelict wreckage, manage momentum transfer, avoid asteroid collisions, and dock cargo into the orbital station's **Recovery Bay**.
 
-1. **Titanium Reactor Core** (Heavy mass: 38t) — High salvage bounty, significant towing inertia.
-2. **Volatile Fuel Pod** (Medium mass: 18t) — Refuels your ship by +40% upon safe docking!
-3. **Comm Satellite Relay** (Light mass: 10t) — Fragile high-frequency orbital dish.
+### 🌟 Handcrafted Missions
+
+1. **Mission 01: Drift Recovery (Sector Alpha — Tutorial)**
+   - *Objective*: Master zero-g thrusters and RCS rotational handling.
+   - *Target*: 1x Communication Relay Dish (12t, light mass, clear sector).
+   - *Fuel Budget*: 100%.
+
+2. **Mission 02: Asteroid Belt Extraction (Sector Beta — Hazards & Fuel Economy)**
+   - *Objective*: Retrieve salvage in an active asteroid field. Dock volatile fuel pods to replenish your thruster tanks.
+   - *Targets*: 1x Volatile Fuel Cell Pod (18t, restores +40% fuel upon docking) + 1x Orbital Sensor Array (14t).
+   - *Obstacles*: 2x irregular orbital asteroid bodies.
+   - *Fuel Budget*: 85%.
+
+3. **Mission 03: High-Mass Extraction (Sector Gamma — Master Trial)**
+   - *Objective*: Heavy inertia management and counter-thrust braking under tight fuel constraints.
+   - *Targets*: 1x Runaway Titanium Reactor Core (45t, extreme momentum), 1x Reserve Fuel Cell (20t), 1x Blackbox Flight Relay (12t).
+   - *Obstacles*: 3x high-density asteroid clusters.
+   - *Fuel Budget*: 75%.
 
 ---
 
-## 🕹️ Controls
+## 🕹️ Flight Controls
 
-| Control | Function |
-| :--- | :--- |
-| `W` / `ArrowUp` | **Main Forward Thrusters** (Consumes fuel, applies forward momentum) |
-| `A` / `D` / `ArrowLeft` / `ArrowRight` | **RCS Lateral Thrusters** (Rotates spacecraft) |
-| `S` / `ArrowDown` | **Retro-Brake Thrusters** (Bleeds off orbital velocity) |
-| `Space` | **Grapple Tether Toggle**: Locks cable onto nearest salvage object; press again to release |
-| `R` | **Reset Sector**: Resets spacecraft and floating salvage objects |
+| Key | Action | Description |
+| :--- | :--- | :--- |
+| `W` / `↑` | **Main Forward Thrusters** | Fires main engine, consumes fuel, applies prograde momentum |
+| `A` / `D` / `←` / `→` | **Lateral RCS Attitude** | Angular rotation of the salvage tug |
+| `S` / `↓` | **Retro-Brake Thrusters** | Burns counter-thrust to rapidly bleed linear velocity |
+| `Space` | **Grapple Tether Toggle** | Locks magnetic cable onto nearest salvage object (< 280px); press again to disconnect |
+| `R` | **Reset Sector** | Instantly reloads current mission sector |
+| `P` | **Pause / Resume** | Freezes Matter.js simulation and timer |
+| `M` | **Mute Audio** | Toggles procedural Web Audio SFX on/off |
 
 ---
 
-## 🛠️ Architecture & Physics
+## 🛠️ Architecture & Physics Implementation
 
-- **Matter.js 2D Rigid-Body Dynamics**: Full Newtonian zero-g simulation with angular momentum, inertia tensor, and elastic `Constraint` spring-cable physics with configurable stiffness and damping.
-- **Dynamic Cable Tension System**: The tether stretches under load with color-coded strain warnings (`Cyan` -> `Yellow` -> `Red`) and will snap if subjected to violent whiplash forces (> 220px stretch).
-- **Procedural Space Audio**: Native Web Audio API synthesizing thruster engine rumble, RCS gas puffs, tether latch metallic clanks, and dock chimes.
-- **Vector CRT Radar Display**: 60 FPS Canvas2D graphics with stardust grid, animated tractor beam rings, and directional guidance arrows.
+- **Matter.js 2D Rigid-Body Dynamics**: Full Newtonian zero-g simulation (`gravity = { x: 0, y: 0, scale: 0 }`). Handles angular inertia, mass scaling (12t to 45t), and elastic `Constraint` spring-cable mechanics with tuned stiffness (0.06) and damping (0.12).
+- **Dynamic Cable Strain & Whiplash Snapping**: The tether computes real-time stretch distance. Strain is rendered dynamically (`Cyan` at 0% strain -> `Yellow` at 50% -> `Red` at 85%+). Exceeding 220px stretch snaps the tether instantly to prevent numerical instability.
+- **Predictive Flight Vector**: Canvas2D renders real-time prograde velocity vectors and distance telemetry from the tug's nose.
+- **Hull Collision & Impact Shake**: High-speed collisions (> 1.2 px/ms) inflict hull integrity damage and trigger screen shake. Hull reaching 0% triggers mission failure.
+- **Clean Physics Lifecycle**: Switching missions or resetting calls `World.clear(engine.world, false)`, completely removing old bodies and constraints to avoid memory leaks or ghost collisions.
+- **100% Procedural Web Audio**: Native Web Audio API synthesis without external audio files. Generates thruster low-pass rumbles, RCS white-noise bursts, metallic latch clanks, high-tension snap twangs, and harmonic docking chimes.
 
 ---
 
 ## 🧪 Testing & Verification
 
-Run the Vitest test suite:
+Run the Vitest test suite (11 unit tests covering flight, RCS, tether latch/break, docking, fuel restoration, multi-missions, and pause/resume):
 ```bash
 npm test
 ```
@@ -58,5 +77,12 @@ npm run dev
 
 ---
 
-## 📜 License
-MIT License.
+## 📜 Asset & Dependency Licenses
+
+- **Engine & Libraries**:
+  - `matter-js` (MIT License) — 2D rigid-body physics engine.
+  - `vite` & `typescript` (MIT License) — Build toolchain.
+  - `vitest` (MIT License) — Testing framework.
+- **Graphics & Sounds**:
+  - 100% original Canvas2D procedural geometry, vector CRT radar grid, and procedural Web Audio API sound effects. Zero external asset packs or commercial audio files used.
+- **Game Project**: MIT License.

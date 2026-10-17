@@ -4,12 +4,17 @@ export class SpaceView {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private animTimer = 0;
+  private screenShakeAmount = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('No 2D context for SpaceView');
     this.ctx = context;
+  }
+
+  public triggerShake(amount = 8): void {
+    this.screenShakeAmount = amount;
   }
 
   public render(engine: SpaceEngine): void {
@@ -21,15 +26,26 @@ export class SpaceView {
     const shipBody = engine.getShipBody();
     const shipState = engine.getShipState();
     const salvageMap = engine.getSalvageBodies();
+    const asteroids = engine.getAsteroidHazards();
     const bay = engine.getRecoveryBay();
     const tether = engine.getTetherConstraint();
 
+    ctx.save();
+
+    // Apply screen shake if active
+    if (this.screenShakeAmount > 0.1) {
+      const sx = (Math.random() * 2 - 1) * this.screenShakeAmount;
+      const sy = (Math.random() * 2 - 1) * this.screenShakeAmount;
+      ctx.translate(sx, sy);
+      this.screenShakeAmount *= 0.88;
+    }
+
     // 1. Deep Space Vector Background
-    ctx.fillStyle = '#060911';
+    ctx.fillStyle = '#050811';
     ctx.fillRect(0, 0, w, h);
 
-    // Stardust grid
-    ctx.strokeStyle = '#0e1626';
+    // Stardust coordinate grid
+    ctx.strokeStyle = '#0e1728';
     ctx.lineWidth = 1;
     for (let x = 0; x < w; x += 60) {
       ctx.beginPath();
@@ -46,7 +62,7 @@ export class SpaceView {
 
     // 2. Recovery Bay (Mothership Dock)
     ctx.save();
-    ctx.fillStyle = 'rgba(0, 255, 170, 0.05)';
+    ctx.fillStyle = 'rgba(0, 255, 170, 0.04)';
     ctx.fillRect(bay.x, bay.y, bay.width, bay.height);
     ctx.strokeStyle = '#00ffaa';
     ctx.lineWidth = 2;
@@ -67,28 +83,32 @@ export class SpaceView {
     ctx.fillText('RECOVERY BAY', bay.x + bay.width / 2, bay.y + bay.height / 2 + 4);
     ctx.restore();
 
-    // 3. Asteroids
-    const asteroids = [
-      { x: 450, y: 280, r: 45, sides: 6 },
-      { x: 850, y: 420, r: 55, sides: 5 }
-    ];
+    // 3. Asteroid Hazards
     for (const ast of asteroids) {
       ctx.save();
       ctx.fillStyle = '#141d2b';
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 2;
+      ctx.shadowColor = '#f59e0b';
+      ctx.shadowBlur = 8;
 
       ctx.beginPath();
       for (let i = 0; i < ast.sides; i++) {
         const a = (i / ast.sides) * Math.PI * 2;
-        const px = ast.x + Math.cos(a) * ast.r;
-        const py = ast.y + Math.sin(a) * ast.r;
+        const px = ast.x + Math.cos(a) * ast.radius;
+        const py = ast.y + Math.sin(a) * ast.radius;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+
+      // Warning marker in center
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚠ HAZARD', ast.x, ast.y + 3);
       ctx.restore();
     }
 
@@ -99,17 +119,15 @@ export class SpaceView {
       const p2 = tether.bodyB.position;
       const tension = shipState.tetherTension;
 
-      // Color from cyan to orange to red on snap danger
       let cableColor = '#00e5ff';
       if (tension > 0.8) cableColor = '#ff3333';
-      else if (tension > 0.4) cableColor = '#ffaa00';
+      else if (tension > 0.45) cableColor = '#ffaa00';
 
       ctx.strokeStyle = cableColor;
       ctx.lineWidth = 2.5;
       ctx.shadowColor = cableColor;
       ctx.shadowBlur = 10;
 
-      // Sag curve when relaxed, straight line when under high tension
       const midX = (p1.x + p2.x) / 2;
       const midY = (p1.y + p2.y) / 2 + (1 - tension) * 18;
 
@@ -145,7 +163,7 @@ export class SpaceView {
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Inner details based on type
+      // Core details
       if (entry.item.type === 'CORE') {
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
@@ -156,11 +174,28 @@ export class SpaceView {
       ctx.fillStyle = '#cbd5e1';
       ctx.font = '9px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(entry.item.name, pos.x, pos.y - r - 6);
+      ctx.fillText(`${entry.item.name} (${entry.item.mass}t)`, pos.x, pos.y - r - 6);
       ctx.restore();
     }
 
-    // 6. Player Spacecraft
+    // 6. Flight Path Trajectory Vector (Prograde Line)
+    const speed = Math.hypot(shipBody.velocity.x, shipBody.velocity.y);
+    if (speed > 0.2) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.moveTo(shipBody.position.x, shipBody.position.y);
+      ctx.lineTo(
+        shipBody.position.x + shipBody.velocity.x * 24,
+        shipBody.position.y + shipBody.velocity.y * 24
+      );
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 7. Player Spacecraft
     ctx.save();
     const sp = shipBody.position;
     ctx.translate(sp.x, sp.y);
@@ -191,7 +226,20 @@ export class SpaceView {
       ctx.restore();
     }
 
-    // Ship Hull (Triangular vector scout)
+    // RCS puffs when turning
+    if (shipState.isTurningLeft || shipState.isTurningRight) {
+      ctx.save();
+      ctx.fillStyle = '#38bdf8';
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 8;
+      const rcsX = shipState.isTurningLeft ? 12 : -12;
+      ctx.beginPath();
+      ctx.arc(rcsX, 0, 3 + Math.random() * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Ship Hull
     ctx.fillStyle = '#00ffaa';
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
@@ -208,14 +256,16 @@ export class SpaceView {
     ctx.stroke();
 
     // Canopy
-    ctx.fillStyle = '#060911';
+    ctx.fillStyle = '#050811';
     ctx.beginPath();
     ctx.arc(0, 2, 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // 7. Navigational Vector Arrow towards nearest salvage item
+    // 8. Navigational Arrow towards nearest salvage item
     this.drawNavArrow(ctx, shipBody.position, salvageMap);
+
+    ctx.restore();
   }
 
   private drawNavArrow(

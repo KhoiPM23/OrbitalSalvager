@@ -1,7 +1,9 @@
+export type SalvageType = 'CORE' | 'FUEL_POD' | 'RELAY';
+
 export interface SalvageItem {
   id: string;
   name: string;
-  type: 'CORE' | 'FUEL_POD' | 'RELAY';
+  type: SalvageType;
   mass: number;
   radius: number;
   color: string;
@@ -9,6 +11,27 @@ export interface SalvageItem {
   initialVel: { x: number; y: number };
   isSalvaged: boolean;
   scoreValue: number;
+}
+
+export interface AsteroidHazard {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  sides: number;
+}
+
+export interface MissionData {
+  id: string;
+  missionNumber: number;
+  name: string;
+  subtitle: string;
+  description: string;
+  initialFuel: number;
+  shipSpawn: { x: number; y: number };
+  recoveryBay: { x: number; y: number; width: number; height: number };
+  asteroids: AsteroidHazard[];
+  salvageItems: SalvageItem[];
 }
 
 export interface ShipState {
@@ -26,7 +49,18 @@ export interface ShipState {
   isBraking: boolean;
 }
 
-export type GameStatus = 'PLAYING' | 'WON' | 'DESTROYED' | 'STRANDED';
+export interface MissionMetrics {
+  missionNumber: number;
+  missionName: string;
+  score: number;
+  fuelRemaining: number;
+  hullRemaining: number;
+  salvagedCount: number;
+  totalItems: number;
+  timeElapsedSeconds: number;
+}
+
+export type GameStatus = 'PLAYING' | 'PAUSED' | 'WON' | 'DESTROYED' | 'STRANDED';
 
 export interface GameEvent {
   type: 'TETHER_LATCH' | 'TETHER_CUT' | 'SALVAGE_SECURED' | 'COLLISION_DAMAGE' | 'FUEL_EMPTY' | 'VICTORY' | 'GAME_OVER';

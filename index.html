@@ -324,7 +324,18 @@
           </div>
         </div>
 
+        <div class="gauge-card">
+          <div class="gauge-label">
+            <span>DEFLECTOR SHIELD</span>
+            <span id="shieldText" style="color: #00e5ff;">100%</span>
+          </div>
+          <div class="gauge-track">
+            <div id="shieldBar" class="gauge-fill" style="background: #00e5ff; width: 100%;"></div>
+          </div>
+        </div>
+
         <div class="header-actions">
+          <button id="btnAssist" class="btn" title="Toggle Inertial Dampeners / Flight Assist"><span id="assistText">ASSIST: ON</span> <span class="key-tag">[X]</span></button>
           <button id="btnMute" class="btn"><span id="muteLabel">SFX: ON</span> <span class="key-tag">[M]</span></button>
           <button id="btnPause" class="btn"><span id="pauseLabel">PAUSE</span> <span class="key-tag">[P]</span></button>
           <button id="btnRestart" class="btn">RESET [R]</button>
@@ -460,11 +471,11 @@
       <span>Thrust: <span class="key-tag">W</span> / <span class="key-tag">↑</span></span>
       <span>RCS Turn: <span class="key-tag">A</span> <span class="key-tag">D</span> / <span class="key-tag">←</span> <span class="key-tag">→</span></span>
       <span>Retro Brake: <span class="key-tag">S</span> / <span class="key-tag">↓</span></span>
+      <span>Dampeners: <span class="key-tag">X</span></span>
       <span>Grapple Tether: <span class="key-tag">SPACE</span></span>
+      <span>Contracts: <span class="key-tag">1..5</span></span>
       <span>Reset: <span class="key-tag">R</span></span>
       <span>Pause: <span class="key-tag">P</span></span>
-      <span>Mute: <span class="key-tag">M</span></span>
-      <span>Engine: Matter.js 2D Rigid Body + Elastic Tether</span>
     </div>
   </div>
 

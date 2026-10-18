@@ -1,5 +1,5 @@
 import { SpaceEngine } from '../physics/spaceEngine';
-import { GravityAnomaly } from '../physics/types';
+import { GravityAnomaly, ShipState } from '../physics/types';
 
 interface Star {
   x: number;
@@ -182,6 +182,9 @@ export class SpaceView {
 
     // 9. Particle Updates & Rendering (Exhaust sparks & RCS puffs)
     this.updateAndDrawParticles(ctx);
+
+    // 9.5. Tactical Target Lock Reticle
+    this.drawTargetLockReticle(ctx, shipState, salvageMap);
 
     // 10. Player Spacecraft (2.5D Metallic Chassis)
     this.drawPlayerShip(ctx, shipBody, shipState);
@@ -549,15 +552,106 @@ export class SpaceView {
     ctx.restore();
   }
 
+  private drawTargetLockReticle(
+    ctx: CanvasRenderingContext2D,
+    shipState: ShipState,
+    salvageMap: Map<string, { body: Matter.Body; item: { name: string; isSalvaged: boolean } }>
+  ): void {
+    if (!shipState.lockedTargetId) return;
+    const entry = salvageMap.get(shipState.lockedTargetId);
+    if (!entry || entry.item.isSalvaged) return;
+
+    const pos = entry.body.position;
+    const boxSize = 26;
+
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+
+    // Rotating target bracket corners
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 10;
+
+    const cornerLen = 8;
+    // Top-left
+    ctx.beginPath();
+    ctx.moveTo(-boxSize, -boxSize + cornerLen);
+    ctx.lineTo(-boxSize, -boxSize);
+    ctx.lineTo(-boxSize + cornerLen, -boxSize);
+    ctx.stroke();
+
+    // Top-right
+    ctx.beginPath();
+    ctx.moveTo(boxSize - cornerLen, -boxSize);
+    ctx.lineTo(boxSize, -boxSize);
+    ctx.lineTo(boxSize, -boxSize + cornerLen);
+    ctx.stroke();
+
+    // Bottom-left
+    ctx.beginPath();
+    ctx.moveTo(-boxSize, boxSize - cornerLen);
+    ctx.lineTo(-boxSize, boxSize);
+    ctx.lineTo(-boxSize + cornerLen, boxSize);
+    ctx.stroke();
+
+    // Bottom-right
+    ctx.beginPath();
+    ctx.moveTo(boxSize - cornerLen, boxSize);
+    ctx.lineTo(boxSize, boxSize);
+    ctx.lineTo(boxSize, boxSize - cornerLen);
+    ctx.stroke();
+
+    // Pulsing central lock diamond
+    const diamondScale = 4 + Math.sin(this.animTimer * 6) * 1.5;
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.7)';
+    ctx.beginPath();
+    ctx.moveTo(0, -diamondScale);
+    ctx.lineTo(diamondScale, 0);
+    ctx.lineTo(0, diamondScale);
+    ctx.lineTo(-diamondScale, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // HUD Target Lock Prompt
+    ctx.font = 'bold 9px "Share Tech Mono", monospace';
+    ctx.fillStyle = '#00e5ff';
+    ctx.textAlign = 'center';
+    ctx.fillText('TARGET LOCKED [SPACE]', 0, boxSize + 14);
+
+    ctx.restore();
+  }
+
   private drawPlayerShip(
     ctx: CanvasRenderingContext2D,
     shipBody: Matter.Body,
-    shipState: { fuel: number; isThrusting: boolean; isTurningLeft: boolean; isTurningRight: boolean }
+    shipState: ShipState
   ): void {
     ctx.save();
     const sp = shipBody.position;
     ctx.translate(sp.x, sp.y);
     ctx.rotate(shipBody.angle + Math.PI / 2);
+
+    // Deflector Force-field Shield Bubble (when shield > 0)
+    if (shipState.shield > 0) {
+      ctx.save();
+      const shieldAlpha = Math.min(0.7, (shipState.shield / 100) * 0.45 + Math.sin(this.animTimer * 5) * 0.1);
+      ctx.strokeStyle = `rgba(0, 229, 255, ${shieldAlpha})`;
+      ctx.lineWidth = 1.6;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 12;
+      ctx.setLineDash([8, 4]);
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 22, 28, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Subtle atmospheric shield glow
+      ctx.fillStyle = `rgba(0, 229, 255, ${shieldAlpha * 0.15})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 22, 28, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     // Thruster exhaust flame & particle emissions
     if (shipState.isThrusting && shipState.fuel > 0) {

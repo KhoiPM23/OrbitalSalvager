@@ -21,8 +21,12 @@ export class SpaceEngine {
   private shipState: ShipState = {
     fuel: 100,
     hull: 100,
+    shield: 100,
     maxFuel: 100,
     maxHull: 100,
+    maxShield: 100,
+    flightAssist: true,
+    lockedTargetId: null,
     score: 0,
     tetherAttachedToId: null,
     tetherLength: 0,
@@ -63,12 +67,20 @@ export class SpaceEngine {
         if (pair.bodyA === this.shipBody || pair.bodyB === this.shipBody) {
           const speed = Vector.magnitude(this.shipBody.velocity);
           if (speed > 1.2) {
-            const damage = Math.round(speed * 4.2);
-            this.shipState.hull = Math.max(0, this.shipState.hull - damage);
+            const rawDamage = Math.round(speed * 4.0);
+            let hullDmg = rawDamage;
+            if (this.shipState.shield > 0) {
+              const absorbed = Math.min(this.shipState.shield, rawDamage);
+              this.shipState.shield = Math.max(0, this.shipState.shield - absorbed);
+              hullDmg = rawDamage - absorbed;
+            }
+            if (hullDmg > 0) {
+              this.shipState.hull = Math.max(0, this.shipState.hull - hullDmg);
+            }
             this.eventsQueue.push({
               type: 'COLLISION_DAMAGE',
-              message: `HULL IMPACT: -${damage}%`,
-              intensity: damage
+              message: this.shipState.shield > 0 ? `SHIELD IMPACT: -${rawDamage}%` : `HULL IMPACT: -${hullDmg}%`,
+              intensity: rawDamage
             });
 
             if (this.shipState.hull <= 0) {
@@ -148,6 +160,9 @@ export class SpaceEngine {
     this.shipState.maxFuel = 100;
     this.shipState.hull = 100;
     this.shipState.maxHull = 100;
+    this.shipState.shield = 100;
+    this.shipState.maxShield = 100;
+    this.shipState.lockedTargetId = null;
     this.shipState.tetherAttachedToId = null;
     this.shipState.tetherLength = 0;
     this.shipState.tetherTension = 0;
@@ -414,6 +429,45 @@ export class SpaceEngine {
 
     Engine.update(this.engine, deltaMs);
 
+    // 1. Inertial Dampener Auto-Stabilizer (Flight Assist)
+    if (this.shipState.flightAssist) {
+      if (!this.shipState.isThrusting && !this.shipState.isBraking) {
+        Body.setVelocity(this.shipBody, {
+          x: this.shipBody.velocity.x * 0.985,
+          y: this.shipBody.velocity.y * 0.985
+        });
+      }
+      if (!this.shipState.isTurningLeft && !this.shipState.isTurningRight) {
+        Body.setAngularVelocity(this.shipBody, this.shipBody.angularVelocity * 0.92);
+      }
+    }
+
+    // 2. Passive Shield Regeneration
+    if (this.shipState.shield < 100) {
+      this.shipState.shield = Math.min(100, this.shipState.shield + 0.05);
+    }
+
+    // 3. Forward Target Lock Scanner (< 260px in ship heading cone)
+    let targetId: string | null = null;
+    let closestDist = 260;
+    const shipAngle = this.shipBody.angle + Math.PI / 2;
+    const forwardX = Math.cos(shipAngle);
+    const forwardY = Math.sin(shipAngle);
+
+    for (const [id, entry] of this.salvageBodies.entries()) {
+      if (entry.item.isSalvaged) continue;
+      const dx = entry.body.position.x - this.shipBody.position.x;
+      const dy = entry.body.position.y - this.shipBody.position.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < closestDist) {
+        const dot = (dx * forwardX + dy * forwardY) / dist;
+        if (dot > 0.4) {
+          closestDist = dist;
+          targetId = id;
+        }
+      }
+    }
+    this.shipState.lockedTargetId = targetId;
 
     this.shipState.isThrusting = false;
     this.shipState.isTurningLeft = false;
@@ -484,6 +538,15 @@ export class SpaceEngine {
       this.gameStatus = 'WON';
       this.eventsQueue.push({ type: 'VICTORY', message: 'ALL SECTOR SALVAGE RETRIEVED!' });
     }
+  }
+
+  public toggleFlightAssist(): boolean {
+    this.shipState.flightAssist = !this.shipState.flightAssist;
+    this.eventsQueue.push({
+      type: 'TETHER_CUT',
+      message: this.shipState.flightAssist ? 'FLIGHT ASSIST: DAMPENERS ON' : 'FLIGHT ASSIST: DECOUPLED ZERO-G'
+    });
+    return this.shipState.flightAssist;
   }
 
   public reset(): void {

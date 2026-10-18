@@ -48,8 +48,12 @@ export interface MissionData {
 export interface ShipState {
   fuel: number; // 0 to 100
   hull: number; // 0 to 100
+  shield: number; // 0 to 100
   maxFuel: number;
   maxHull: number;
+  maxShield: number;
+  flightAssist: boolean; // Inertial dampener auto-stabilizer
+  lockedTargetId: string | null;
   score: number;
   tetherAttachedToId: string | null;
   tetherLength: number;

@@ -257,4 +257,40 @@ describe('OrbitalSalvager 2D Physics & Tether System', () => {
     expect(salvage.size).toBe(2);
     expect(salvage.get('salvage-dark-core')?.item.mass).toBe(50);
   });
+
+  it('should toggle flight assist dampeners and stabilize idle drift', () => {
+    const engine = new SpaceEngine(1200, 800, 0);
+    const state = engine.getShipState();
+    expect(state.flightAssist).toBe(true);
+
+    const toggledOff = engine.toggleFlightAssist();
+    expect(toggledOff).toBe(false);
+    expect(engine.getShipState().flightAssist).toBe(false);
+
+    const toggledOn = engine.toggleFlightAssist();
+    expect(toggledOn).toBe(true);
+    expect(engine.getShipState().flightAssist).toBe(true);
+
+    // Test dampening of angular velocity
+    const ship = engine.getShipBody();
+    Matter.Body.setAngularVelocity(ship, 0.5);
+    engine.update(16);
+    expect(Math.abs(ship.angularVelocity)).toBeLessThan(0.5);
+  });
+
+  it('should initialize deflector shield at 100% and support forward target scanning', () => {
+    const engine = new SpaceEngine(1200, 800, 0);
+    const state = engine.getShipState();
+    expect(state.shield).toBe(100);
+    expect(state.maxShield).toBe(100);
+
+    // Target scanning updates on engine.update
+    engine.update(16);
+    // Since Mission 0 spawn faces north towards salvage items, lockedTargetId should either be null or a valid id
+    const locked = engine.getShipState().lockedTargetId;
+    if (locked) {
+      expect(engine.getSalvageBodies().has(locked)).toBe(true);
+    }
+  });
 });
+

@@ -13,6 +13,10 @@ const hullBar = document.getElementById('hullBar') as HTMLElement;
 const tetherStatus = document.getElementById('tetherStatus') as HTMLElement;
 const salvageCounter = document.getElementById('salvageCounter') as HTMLElement;
 const scoreText = document.getElementById('scoreText') as HTMLElement;
+const shieldText = document.getElementById('shieldText') as HTMLElement;
+const shieldBar = document.getElementById('shieldBar') as HTMLElement;
+const btnAssist = document.getElementById('btnAssist') as HTMLButtonElement;
+const assistText = document.getElementById('assistText') as HTMLElement;
 
 const btnRestart = document.getElementById('btnRestart') as HTMLButtonElement;
 const btnBriefing = document.getElementById('btnBriefing') as HTMLButtonElement;
@@ -97,6 +101,13 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  // Toggle Flight Assist / Dampeners
+  if (e.key === 'x' || e.key === 'X') {
+    e.preventDefault();
+    toggleAssist();
+    return;
+  }
+
   // Quick mission jump [1]..[5]
   if (e.key >= '1' && e.key <= '5') {
     const idx = parseInt(e.key, 10) - 1;
@@ -150,6 +161,13 @@ function toggleMute(): void {
   muteLabel.textContent = muted ? 'SFX: MUTED' : 'SFX: ON';
 }
 
+function toggleAssist(): void {
+  const assist = engine.toggleFlightAssist();
+  assistText.textContent = assist ? 'ASSIST: ON' : 'ASSIST: OFF';
+  btnAssist.style.borderColor = assist ? '#00e5ff' : '#64748b';
+  spaceAudio.ensureAudio();
+}
+
 function togglePause(): void {
   isPaused = !isPaused;
   engine.setPaused(isPaused);
@@ -175,6 +193,7 @@ btnBriefing.addEventListener('click', () => {
 });
 
 btnRestart.addEventListener('click', handleReset);
+btnAssist.addEventListener('click', toggleAssist);
 btnMute.addEventListener('click', toggleMute);
 btnPause.addEventListener('click', togglePause);
 btnResumeGame.addEventListener('click', togglePause);
@@ -232,6 +251,21 @@ function updateTelemetry(): void {
   } else {
     hullBar.style.background = '#00ffaa';
   }
+
+  // Shield bar
+  shieldText.textContent = `${Math.round(state.shield)}%`;
+  shieldBar.style.width = `${Math.max(0, state.shield)}%`;
+  if (state.shield < 25) {
+    shieldBar.style.background = '#ff4444';
+  } else if (state.shield < 60) {
+    shieldBar.style.background = '#00bcd4';
+  } else {
+    shieldBar.style.background = '#00e5ff';
+  }
+
+  // Assist status sync
+  assistText.textContent = state.flightAssist ? 'ASSIST: ON' : 'ASSIST: OFF';
+  btnAssist.style.borderColor = state.flightAssist ? '#00e5ff' : '#64748b';
 
   // Tether status
   if (state.tetherAttachedToId) {

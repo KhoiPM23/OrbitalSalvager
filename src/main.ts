@@ -27,6 +27,11 @@ const radioCommBox = document.getElementById('radioCommBox') as HTMLElement;
 const radioCallsign = document.getElementById('radioCallsign') as HTMLElement;
 const radioText = document.getElementById('radioText') as HTMLElement;
 
+const radarMiniCanvas = document.getElementById('radarMiniCanvas') as HTMLCanvasElement | null;
+const radarCtx = radarMiniCanvas?.getContext('2d');
+const hazardWarningBanner = document.getElementById('hazardWarningBanner') as HTMLElement | null;
+let lastHazardAlarmTime = 0;
+
 const btnRestart = document.getElementById('btnRestart') as HTMLButtonElement;
 const btnBriefing = document.getElementById('btnBriefing') as HTMLButtonElement;
 const modalBrief = document.getElementById('modalBrief') as HTMLElement;
@@ -386,6 +391,150 @@ function updateTelemetry(): void {
   }
 }
 
+function renderCockpitRadar(engine: SpaceEngine): void {
+  if (!radarCtx || !radarMiniCanvas) return;
+  const ctx = radarCtx;
+  const w = radarMiniCanvas.width;
+  const h = radarMiniCanvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const radarRadius = 52;
+  const worldRange = 600;
+  const scale = radarRadius / worldRange;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Background circle
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2);
+  ctx.clip();
+
+  // Range rings
+  ctx.strokeStyle = 'rgba(0, 229, 255, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 35, 0, Math.PI * 2);
+  ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Crosshairs
+  ctx.beginPath();
+  ctx.moveTo(cx - radarRadius, cy);
+  ctx.lineTo(cx + radarRadius, cy);
+  ctx.moveTo(cx, cy - radarRadius);
+  ctx.lineTo(cx, cy + radarRadius);
+  ctx.stroke();
+
+  // Rotating sweep beam
+  const sweepAngle = (performance.now() * 0.002) % (Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0, 255, 170, 0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(sweepAngle) * radarRadius, cy + Math.sin(sweepAngle) * radarRadius);
+  ctx.stroke();
+
+  const ship = engine.getShipBody();
+  if (!ship) {
+    ctx.restore();
+    return;
+  }
+  const shipX = ship.position.x;
+  const shipY = ship.position.y;
+
+  // Helper to map world to radar coords clamped inside radarRadius
+  const toRadar = (wx: number, wy: number) => {
+    const dx = (wx - shipX) * scale;
+    const dy = (wy - shipY) * scale;
+    const d = Math.hypot(dx, dy);
+    if (d > radarRadius - 3) {
+      return { x: cx + (dx / d) * (radarRadius - 4), y: cy + (dy / d) * (radarRadius - 4) };
+    }
+    return { x: cx + dx, y: cy + dy };
+  };
+
+  // 1. Recovery Bay (Mothership Dock)
+  const bay = engine.getRecoveryBay();
+  const bayPos = toRadar(bay.x + bay.width / 2, bay.y + bay.height / 2);
+  ctx.fillStyle = '#00ffaa';
+  ctx.fillRect(bayPos.x - 3, bayPos.y - 3, 6, 6);
+
+  // 2. Salvage Items
+  const salvage = engine.getSalvageBodies();
+  for (const entry of salvage.values()) {
+    if (entry.item.isSalvaged) continue;
+    const sPos = toRadar(entry.body.position.x, entry.body.position.y);
+    ctx.fillStyle = entry.item.type === 'CORE' ? '#a855f7' : (entry.item.type === 'FUEL_POD' ? '#ffaa00' : '#00e5ff');
+    ctx.beginPath();
+    ctx.arc(sPos.x, sPos.y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 3. Asteroid Hazards
+  const asteroids = engine.getAsteroidHazards();
+  ctx.fillStyle = '#ef4444';
+  let closestHazardDist = Infinity;
+  let isNearSingularity = false;
+
+  for (const ast of asteroids) {
+    const aDist = Math.hypot(ast.x - shipX, ast.y - shipY);
+    if (aDist < closestHazardDist) closestHazardDist = aDist;
+    const aPos = toRadar(ast.x, ast.y);
+    ctx.beginPath();
+    ctx.arc(aPos.x, aPos.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 4. Gravity Wells / Singularity
+  const wells = engine.getGravityWells();
+  for (const gw of wells) {
+    const gDist = Math.hypot(gw.x - shipX, gw.y - shipY);
+    if (gDist < gw.radius * 0.75) isNearSingularity = true;
+    const gPos = toRadar(gw.x, gw.y);
+    ctx.strokeStyle = '#f43f5e';
+    ctx.beginPath();
+    ctx.arc(gPos.x, gPos.y, Math.max(3, gw.radius * scale), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // 5. Player Ship in Center
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(ship.angle + Math.PI / 2);
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.moveTo(0, -6);
+  ctx.lineTo(-4, 4);
+  ctx.lineTo(4, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+
+  // Proximity Hazard Warning Evaluation
+  const speed = Math.hypot(ship.velocity.x, ship.velocity.y);
+  const isCollisionThreat = closestHazardDist < 130 && speed > 1.2;
+
+  if (isCollisionThreat || isNearSingularity) {
+    if (hazardWarningBanner) {
+      hazardWarningBanner.textContent = isNearSingularity ?
+        '⚠️ GRAVITATIONAL SHEAR CRITICAL // EVENT HORIZON PROXIMITY' :
+        '⚠️ COLLISION WARNING // VELOCITY VECTOR HAZARD';
+      hazardWarningBanner.classList.remove('hidden');
+    }
+    const now = performance.now();
+    if (now - lastHazardAlarmTime > 750) {
+      spaceAudio.playHazardAlarm();
+      lastHazardAlarmTime = now;
+    }
+  } else if (hazardWarningBanner) {
+    hazardWarningBanner.classList.add('hidden');
+  }
+}
+
 // 60fps Loop
 let lastTime = performance.now();
 
@@ -442,6 +591,7 @@ function frameLoop(time: number): void {
     }
 
     updateTelemetry();
+    renderCockpitRadar(engine);
   } else {
     spaceAudio.stopThruster();
   }

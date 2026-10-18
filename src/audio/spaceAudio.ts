@@ -203,6 +203,30 @@ class SpaceAudioEngine {
       // Ignore
     }
   }
+
+  public playHazardAlarm(): void {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.init();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.setValueAtTime(440, now + 0.08);
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.18);
+    } catch {
+      // Ignore
+    }
+  }
 }
 
 export const spaceAudio = new SpaceAudioEngine();

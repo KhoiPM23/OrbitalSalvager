@@ -1,6 +1,6 @@
 import { spaceAudio } from './audio/spaceAudio';
 import { SpaceEngine } from './physics/spaceEngine';
-import { SpaceView } from './renderer/spaceView';
+import { SpaceView3D } from './renderer/spaceView3D';
 
 // DOM Elements
 const canvas = document.getElementById('spaceCanvas') as HTMLCanvasElement;
@@ -49,7 +49,7 @@ const btnRetryDefeat = document.getElementById('btnRetryDefeat') as HTMLButtonEl
 
 // Initialization
 const engine = new SpaceEngine(1200, 700, 0);
-const view = new SpaceView(canvas);
+const view = new SpaceView3D(canvas);
 
 let isGameRunning = false;
 let isPaused = false;

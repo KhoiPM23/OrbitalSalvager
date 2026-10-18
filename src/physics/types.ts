@@ -11,6 +11,9 @@ export interface SalvageItem {
   initialVel: { x: number; y: number };
   isSalvaged: boolean;
   scoreValue: number;
+  derelictShip?: string;
+  loreLog?: string;
+  bountyCredits?: number;
 }
 
 export interface AsteroidHazard {
@@ -19,6 +22,16 @@ export interface AsteroidHazard {
   y: number;
   radius: number;
   sides: number;
+}
+
+export interface WreckageHazard {
+  id: string;
+  x: number;
+  y: number;
+  type: 'HULL_FRAGMENT' | 'SOLAR_BOOM' | 'BEACON_BUOY';
+  width: number;
+  height: number;
+  rotation: number;
 }
 
 export interface GravityAnomaly {
@@ -30,18 +43,28 @@ export interface GravityAnomaly {
   color?: string;
 }
 
+export interface RadioCommMessage {
+  trigger: 'START' | 'TETHER' | 'DOCK' | 'LOW_FUEL' | 'SINGULARITY';
+  sender: string;
+  callsign: string;
+  text: string;
+}
+
 export interface MissionData {
   id: string;
   missionNumber: number;
   name: string;
   subtitle: string;
   description: string;
+  sectorLore: string;
   initialFuel: number;
   shipSpawn: { x: number; y: number };
   recoveryBay: { x: number; y: number; width: number; height: number };
   asteroids: AsteroidHazard[];
+  wreckage?: WreckageHazard[];
   salvageItems: SalvageItem[];
   gravityWells?: GravityAnomaly[];
+  radioComms?: RadioCommMessage[];
 }
 
 

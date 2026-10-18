@@ -17,6 +17,15 @@ const shieldText = document.getElementById('shieldText') as HTMLElement;
 const shieldBar = document.getElementById('shieldBar') as HTMLElement;
 const btnAssist = document.getElementById('btnAssist') as HTMLButtonElement;
 const assistText = document.getElementById('assistText') as HTMLElement;
+const btnBlackbox = document.getElementById('btnBlackbox') as HTMLButtonElement;
+const intelCount = document.getElementById('intelCount') as HTMLElement;
+const modalBlackbox = document.getElementById('modalBlackbox') as HTMLElement;
+const btnBlackboxDismiss = document.getElementById('btnBlackboxDismiss') as HTMLButtonElement;
+const blackboxLogList = document.getElementById('blackboxLogList') as HTMLElement;
+
+const radioCommBox = document.getElementById('radioCommBox') as HTMLElement;
+const radioCallsign = document.getElementById('radioCallsign') as HTMLElement;
+const radioText = document.getElementById('radioText') as HTMLElement;
 
 const btnRestart = document.getElementById('btnRestart') as HTMLButtonElement;
 const btnBriefing = document.getElementById('btnBriefing') as HTMLButtonElement;
@@ -62,7 +71,7 @@ function syncMissionUI(): void {
   missionBadge.textContent = `MISSION ${idx + 1} / ${engine.getTotalMissions()}`;
   missionDescShort.textContent = mission.name.replace(/MISSION \d+: /, '');
   briefTitle.textContent = mission.name;
-  briefDescription.textContent = mission.description;
+  briefDescription.innerHTML = `<strong>${mission.subtitle}</strong><br><br>${mission.description}<br><br><span style="color: #64748b; font-size: 11px;">[SECTOR INTEL] ${mission.sectorLore}</span>`;
 
   document.querySelectorAll('.btn-mission-item').forEach(el => {
     const mIdx = parseInt(el.getAttribute('data-mission') || '0', 10);
@@ -108,6 +117,13 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  // Toggle Blackbox Manifest Logs
+  if (e.key === 'l' || e.key === 'L') {
+    e.preventDefault();
+    toggleBlackbox();
+    return;
+  }
+
   // Quick mission jump [1]..[5]
   if (e.key >= '1' && e.key <= '5') {
     const idx = parseInt(e.key, 10) - 1;
@@ -141,6 +157,11 @@ function handleTetherToggle(): void {
   const attached = engine.toggleTether();
   if (attached) {
     spaceAudio.playTetherLatch();
+    const mission = engine.getCurrentMission();
+    const comm = mission.radioComms?.find(c => c.trigger === 'TETHER');
+    if (comm) {
+      showRadioComm(`${comm.callsign} // ${comm.sender}`, comm.text);
+    }
   } else {
     spaceAudio.playTetherCut();
   }
@@ -186,11 +207,67 @@ btnStartGame.addEventListener('click', () => {
   modalBrief.classList.add('hidden');
   isGameRunning = true;
   spaceAudio.ensureAudio();
+  const mission = engine.getCurrentMission();
+  const comm = mission.radioComms?.find(c => c.trigger === 'START');
+  if (comm) {
+    showRadioComm(`${comm.callsign} // ${comm.sender}`, comm.text);
+  }
 });
 
 btnBriefing.addEventListener('click', () => {
   modalBrief.classList.toggle('hidden');
 });
+
+let radioTimer: number | null = null;
+function showRadioComm(callsign: string, text: string): void {
+  radioCallsign.textContent = callsign;
+  radioText.textContent = text;
+  radioCommBox.classList.remove('hidden');
+  spaceAudio.ensureAudio();
+  if (radioTimer) clearTimeout(radioTimer);
+  radioTimer = window.setTimeout(() => {
+    radioCommBox.classList.add('hidden');
+  }, 6000);
+}
+
+const recoveredLogs: { name: string; ship: string; log: string; bounty: number }[] = [];
+
+function recordSalvageLore(item: any): void {
+  if (recoveredLogs.some(l => l.name === item.name)) return;
+  recoveredLogs.push({
+    name: item.name,
+    ship: item.derelictShip || 'Unregistered Derelict',
+    log: item.loreLog || 'Telemetry damaged during orbit decay.',
+    bounty: item.bountyCredits || (item.scoreValue * 25)
+  });
+  intelCount.textContent = `LOGS: ${recoveredLogs.length}`;
+  renderBlackboxList();
+}
+
+function renderBlackboxList(): void {
+  if (recoveredLogs.length === 0) {
+    blackboxLogList.innerHTML = '<div style="color: #64748b; font-size: 12px; text-align: center; padding: 24px;">NO BLACKBOX RECORDERS RETRIEVED YET. DOCK DERELICT CARGO TO RECOVER FLIGHT LOGS.</div>';
+    return;
+  }
+  blackboxLogList.innerHTML = recoveredLogs.map(l => `
+    <div class="blackbox-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h4>${l.name}</h4>
+        <span style="color: #00ffaa; font-weight: 700; font-size: 11px;">+${l.bounty.toLocaleString()} CR</span>
+      </div>
+      <div class="blackbox-ship">ORIGIN: ${l.ship}</div>
+      <div class="blackbox-log">"${l.log}"</div>
+    </div>
+  `).join('');
+}
+
+function toggleBlackbox(): void {
+  modalBlackbox.classList.toggle('hidden');
+  renderBlackboxList();
+}
+
+btnBlackbox.addEventListener('click', toggleBlackbox);
+btnBlackboxDismiss.addEventListener('click', toggleBlackbox);
 
 btnRestart.addEventListener('click', handleReset);
 btnAssist.addEventListener('click', toggleAssist);
@@ -348,6 +425,17 @@ function frameLoop(time: number): void {
         view.triggerShake(Math.min(18, (ev.intensity || 5) * 1.5));
       } else if (ev.type === 'SALVAGE_SECURED') {
         spaceAudio.playSalvageDocked();
+        const salvageMap = engine.getSalvageBodies();
+        for (const entry of salvageMap.values()) {
+          if (entry.item.isSalvaged) {
+            recordSalvageLore(entry.item);
+          }
+        }
+        const mission = engine.getCurrentMission();
+        const comm = mission.radioComms?.find(c => c.trigger === 'DOCK');
+        if (comm) {
+          showRadioComm(`${comm.callsign} // ${comm.sender}`, comm.text);
+        }
       } else if (ev.type === 'TETHER_CUT') {
         spaceAudio.playTetherCut();
       }

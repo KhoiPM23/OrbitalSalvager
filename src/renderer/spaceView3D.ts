@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SpaceEngine } from '../physics/spaceEngine';
-import { AsteroidHazard, GravityAnomaly, SalvageItem, ShipState } from '../physics/types';
+import { AsteroidHazard, GravityAnomaly, SalvageItem, ShipState, WreckageHazard } from '../physics/types';
 import { ProceduralTextures } from './textures';
 
 interface Particle3D {
@@ -33,6 +33,7 @@ export class SpaceView3D {
 
   // Dynamic mesh pools mapped by ID
   private asteroidMeshes = new Map<string, THREE.Mesh>();
+  private wreckageMeshes = new Map<string, THREE.Group>();
   private salvageMeshes = new Map<string, THREE.Group>();
   private recoveryBayGroup = new THREE.Group();
   private gravityWellGroups = new Map<string, THREE.Group>();
@@ -430,6 +431,9 @@ export class SpaceView3D {
     // 5. Sync Asteroids
     this.syncAsteroids(mission.asteroids);
 
+    // 5.5 Sync 3D Derelict Wreckage & Navigation Buoys
+    this.syncWreckage(mission.wreckage);
+
     // 6. Sync Salvage Cargo & Satellites
     this.syncSalvageItems(salvageMap);
 
@@ -528,6 +532,68 @@ export class SpaceView3D {
       mesh.rotation.x += 0.003;
       mesh.rotation.y += 0.005;
       mesh.rotation.z += 0.002;
+    }
+  }
+
+  private syncWreckage(wreckage?: WreckageHazard[]): void {
+    if (!wreckage) return;
+    const hullTex = ProceduralTextures.getHullTexture();
+    const solarTex = ProceduralTextures.getSolarTexture();
+
+    for (const wrk of wreckage) {
+      let group = this.wreckageMeshes.get(wrk.id);
+      if (!group) {
+        group = new THREE.Group();
+
+        if (wrk.type === 'HULL_FRAGMENT') {
+          const geo = new THREE.BoxGeometry(wrk.width, wrk.height, 8);
+          const mat = new THREE.MeshStandardMaterial({
+            map: hullTex,
+            roughness: 0.6,
+            metalness: 0.8
+          });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.castShadow = true;
+          group.add(mesh);
+        } else if (wrk.type === 'SOLAR_BOOM') {
+          const geo = new THREE.PlaneGeometry(wrk.width, wrk.height);
+          const mat = new THREE.MeshStandardMaterial({
+            map: solarTex,
+            roughness: 0.2,
+            metalness: 0.9,
+            side: THREE.DoubleSide
+          });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.castShadow = true;
+          group.add(mesh);
+        } else {
+          // BEACON_BUOY
+          const buoyGeo = new THREE.CylinderGeometry(4, 6, 18, 8);
+          buoyGeo.rotateX(Math.PI / 2);
+          const buoyMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 });
+          const buoyMesh = new THREE.Mesh(buoyGeo, buoyMat);
+          group.add(buoyMesh);
+
+          const lightGeo = new THREE.SphereGeometry(2.5, 8, 8);
+          const lightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+          const lightMesh = new THREE.Mesh(lightGeo, lightMat);
+          lightMesh.name = 'buoyLight';
+          lightMesh.position.set(0, 0, 10);
+          group.add(lightMesh);
+        }
+
+        this.wreckageMeshes.set(wrk.id, group);
+        this.scene.add(group);
+      }
+
+      group.position.set(wrk.x, -wrk.y, -4);
+      group.rotation.z = wrk.rotation + this.animTimer * 0.05;
+
+      const light = group.getObjectByName('buoyLight') as THREE.Mesh;
+      if (light) {
+        const mat = light.material as THREE.MeshBasicMaterial;
+        mat.color.setHex(Math.sin(this.animTimer * 4) > 0 ? 0xef4444 : 0x450a0a);
+      }
     }
   }
 

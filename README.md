@@ -1,28 +1,29 @@
-# OrbitalSalvager — 2D Momentum & Tether Salvage
+# OrbitalSalvager — 3D Momentum & Tether Salvage
 
-A tactical 2D physics-based space recovery game built around Newtonian inertia, Matter.js spring-constraint cable dynamics, and zero-gravity thruster navigation.
+A tactical 3D WebGL physics-based space recovery game built with Three.js and Matter.js, featuring Newtonian zero-g inertia, procedural PBR textures, spring-constraint cable dynamics, and gravitational singularities.
 
 ![OrbitalSalvager](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)
-![Tests](https://img.shields.io/badge/Tests-11%2F11%20Passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/Tests-16%2F16%20Passing-brightgreen.svg)
+![Graphics](https://img.shields.io/badge/Graphics-Three.js%203D%20WebGL-cyan.svg)
 
 ---
 
 ## 🚀 Game Overview
 
-Pilot an industrial salvage tug in Low Earth Orbit across 3 distinct hazard sectors. Grapple derelict wreckage, manage momentum transfer, avoid asteroid collisions, and dock cargo into the orbital station's **Recovery Bay**.
+Pilot an industrial salvage tug in deep space across 5 challenging mission sectors. Grapple derelict wreckage, manage momentum transfer, deflect asteroid collisions with rechargeable force-field shields, navigate around gravitational singularities, and dock cargo into the orbital station's **Recovery Bay**.
 
 ### 🌟 Handcrafted Missions
 
 1. **Mission 01: Drift Recovery (Sector Alpha — Tutorial)**
-   - *Objective*: Master zero-g thrusters and RCS rotational handling.
+   - *Objective*: Master zero-g thrusters, Flight Assist dampeners, and grapple tethering.
    - *Target*: 1x Communication Relay Dish (12t, light mass, clear sector).
    - *Fuel Budget*: 100%.
 
 2. **Mission 02: Asteroid Belt Extraction (Sector Beta — Hazards & Fuel Economy)**
-   - *Objective*: Retrieve salvage in an active asteroid field. Dock volatile fuel pods to replenish your thruster tanks.
-   - *Targets*: 1x Volatile Fuel Cell Pod (18t, restores +40% fuel upon docking) + 1x Orbital Sensor Array (14t).
-   - *Obstacles*: 2x irregular orbital asteroid bodies.
+   - *Objective*: Retrieve salvage in an active asteroid field. Dock volatile fuel pods to replenish thruster tanks.
+   - *Targets*: 1x Volatile Fuel Cell Pod (18t, restores +40% fuel) + 1x Orbital Sensor Array (14t).
+   - *Obstacles*: 2x irregular 3D textured asteroid hazards.
    - *Fuel Budget*: 85%.
 
 3. **Mission 03: High-Mass Extraction (Sector Gamma — Master Trial)**
@@ -30,6 +31,16 @@ Pilot an industrial salvage tug in Low Earth Orbit across 3 distinct hazard sect
    - *Targets*: 1x Runaway Titanium Reactor Core (45t, extreme momentum), 1x Reserve Fuel Cell (20t), 1x Blackbox Flight Relay (12t).
    - *Obstacles*: 3x high-density asteroid clusters.
    - *Fuel Budget*: 75%.
+
+4. **Mission 04: Singularity Horizon (Sector Delta — Gravitational Slingshot)**
+   - *Objective*: Exploit Newtonian gravitational pull from a micro-singularity to slingshot salvage containers.
+   - *Targets*: 1x Volatile Antimatter Pod (25t), 1x Encrypted Nav Beacon (15t).
+   - *Obstacles*: 1x active gravitational anomaly well with swirling accretion disk.
+
+5. **Mission 05: The Binary Pulsars (Sector Omega — Endgame Gravity Ballet)**
+   - *Objective*: Navigate complex dual gravitational wells to extract ultra-heavy dark matter salvage.
+   - *Targets*: 1x Dark Matter Core (50t), 1x Deep Space Transponder (18t).
+   - *Obstacles*: 2x binary gravitational singularities + dense asteroid perimeter.
 
 ---
 

@@ -1,14 +1,20 @@
 class SpaceAudioEngine {
   private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
   private thrusterGain: GainNode | null = null;
   private thrusterSource: AudioBufferSourceNode | null = null;
   private isThrustingSoundActive = false;
   private isMuted = false;
+  private masterVolume = 0.8;
+  private isHazardAlarmEnabled = true;
 
   private init(): AudioContext {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AudioCtx();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVolume, this.ctx.currentTime);
+      this.masterGain.connect(this.ctx.destination);
     }
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
@@ -16,8 +22,35 @@ class SpaceAudioEngine {
     return this.ctx;
   }
 
+  private getOutput(): AudioNode {
+    this.init();
+    return this.masterGain || this.ctx!.destination;
+  }
+
+  public setMasterVolume(vol: number): void {
+    this.masterVolume = Math.max(0, Math.min(1, vol));
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVolume, this.ctx.currentTime);
+    }
+  }
+
+  public getMasterVolume(): number {
+    return this.masterVolume;
+  }
+
+  public setHazardAlarmEnabled(enabled: boolean): void {
+    this.isHazardAlarmEnabled = enabled;
+  }
+
+  public isAlarmEnabled(): boolean {
+    return this.isHazardAlarmEnabled;
+  }
+
   public setMute(muted: boolean): boolean {
     this.isMuted = muted;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVolume, this.ctx.currentTime);
+    }
     if (this.isMuted) {
       this.stopThruster();
     }
@@ -61,7 +94,7 @@ class SpaceAudioEngine {
 
       this.thrusterSource.connect(filter);
       filter.connect(this.thrusterGain);
-      this.thrusterGain.connect(ctx.destination);
+      this.thrusterGain.connect(this.getOutput());
 
       this.thrusterSource.start();
       this.isThrustingSoundActive = true;
@@ -101,7 +134,7 @@ class SpaceAudioEngine {
       gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.05);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getOutput());
       osc.start();
       osc.stop(ctx.currentTime + 0.05);
     } catch {
@@ -124,7 +157,7 @@ class SpaceAudioEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getOutput());
       osc.start();
       osc.stop(ctx.currentTime + 0.15);
     } catch {
@@ -147,7 +180,7 @@ class SpaceAudioEngine {
       gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.1);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getOutput());
       osc.start();
       osc.stop(ctx.currentTime + 0.1);
     } catch {
@@ -172,7 +205,7 @@ class SpaceAudioEngine {
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
 
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(this.getOutput());
         osc.start(t);
         osc.stop(t + 0.35);
       });
@@ -196,7 +229,7 @@ class SpaceAudioEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getOutput());
       osc.start();
       osc.stop(ctx.currentTime + 0.15);
     } catch {
@@ -205,7 +238,7 @@ class SpaceAudioEngine {
   }
 
   public playHazardAlarm(): void {
-    if (this.isMuted) return;
+    if (this.isMuted || !this.isHazardAlarmEnabled) return;
     try {
       const ctx = this.init();
       const osc = ctx.createOscillator();
@@ -220,7 +253,7 @@ class SpaceAudioEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getOutput());
       osc.start(now);
       osc.stop(now + 0.18);
     } catch {

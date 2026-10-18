@@ -68,6 +68,13 @@ export interface MissionData {
 }
 
 
+export interface ShipUpgrades {
+  thrusterTier: number; // 0..3 (+20% thrust per tier)
+  tetherTier: number;   // 0..3 (+25% range & +30% snap tolerance)
+  hullTier: number;     // 0..3 (+25 max hull per tier)
+  gyroTier: number;     // 0..3 (+20% turning agility & braking)
+}
+
 export interface ShipState {
   fuel: number; // 0 to 100
   hull: number; // 0 to 100

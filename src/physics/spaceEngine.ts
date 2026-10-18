@@ -1,6 +1,6 @@
 import Matter from 'matter-js';
 import { ORBITAL_MISSIONS } from './missions';
-import { AsteroidHazard, GameEvent, GameStatus, GravityAnomaly, MissionData, MissionMetrics, SalvageItem, ShipState } from './types';
+import { AsteroidHazard, GameEvent, GameStatus, GravityAnomaly, MissionData, MissionMetrics, SalvageItem, ShipState, ShipUpgrades } from './types';
 
 
 const { Engine, World, Bodies, Body, Constraint, Vector, Events } = Matter;
@@ -17,6 +17,13 @@ export class SpaceEngine {
 
   private tetherConstraint: Matter.Constraint | null = null;
   private attachedItemId: string | null = null;
+
+  private upgrades: ShipUpgrades = {
+    thrusterTier: 0,
+    tetherTier: 0,
+    hullTier: 0,
+    gyroTier: 0
+  };
 
   private shipState: ShipState = {
     fuel: 100,
@@ -156,10 +163,11 @@ export class SpaceEngine {
     World.add(this.engine.world, [this.shipBody, ...this.boundaryWalls, ...this.asteroidBodies, ...salvageList]);
 
     // Reset state
+    const maxHull = 100 + this.upgrades.hullTier * 25;
     this.shipState.fuel = mission.initialFuel;
     this.shipState.maxFuel = 100;
-    this.shipState.hull = 100;
-    this.shipState.maxHull = 100;
+    this.shipState.hull = maxHull;
+    this.shipState.maxHull = maxHull;
     this.shipState.shield = 100;
     this.shipState.maxShield = 100;
     this.shipState.lockedTargetId = null;
@@ -298,6 +306,19 @@ export class SpaceEngine {
     };
   }
 
+  public setShipUpgrades(upgrades: ShipUpgrades): void {
+    this.upgrades = { ...upgrades };
+    const maxHull = 100 + this.upgrades.hullTier * 25;
+    this.shipState.maxHull = maxHull;
+    if (this.shipState.hull > maxHull) {
+      this.shipState.hull = maxHull;
+    }
+  }
+
+  public getShipUpgrades(): Readonly<ShipUpgrades> {
+    return this.upgrades;
+  }
+
   // Controls
   public applyThrust(): void {
     if (this.gameStatus !== 'PLAYING' || this.shipState.fuel <= 0) return;
@@ -306,7 +327,7 @@ export class SpaceEngine {
     this.shipState.fuel = Math.max(0, this.shipState.fuel - 0.07);
 
     const angle = this.shipBody.angle + Math.PI / 2;
-    const forceMagnitude = 0.0035;
+    const forceMagnitude = 0.0035 * (1 + this.upgrades.thrusterTier * 0.20);
     const force = {
       x: Math.cos(angle) * forceMagnitude,
       y: Math.sin(angle) * forceMagnitude
@@ -323,7 +344,8 @@ export class SpaceEngine {
     if (direction < 0) this.shipState.isTurningLeft = true;
     if (direction > 0) this.shipState.isTurningRight = true;
 
-    Body.setAngularVelocity(this.shipBody, direction * 0.05);
+    const turnSpeed = 0.05 * (1 + this.upgrades.gyroTier * 0.20);
+    Body.setAngularVelocity(this.shipBody, direction * turnSpeed);
   }
 
   public applyBrake(): void {
@@ -331,9 +353,10 @@ export class SpaceEngine {
 
     this.shipState.isBraking = true;
     this.shipState.fuel = Math.max(0, this.shipState.fuel - 0.05);
+    const brakeFactor = 0.94 - this.upgrades.gyroTier * 0.02;
     Body.setVelocity(this.shipBody, {
-      x: this.shipBody.velocity.x * 0.94,
-      y: this.shipBody.velocity.y * 0.94
+      x: this.shipBody.velocity.x * brakeFactor,
+      y: this.shipBody.velocity.y * brakeFactor
     });
 
     if (this.shipState.fuel <= 0) {
@@ -350,7 +373,7 @@ export class SpaceEngine {
     }
 
     let closestId: string | null = null;
-    let closestDist = 280;
+    let closestDist = 280 * (1 + this.upgrades.tetherTier * 0.25);
 
     for (const [id, entry] of this.salvageBodies.entries()) {
       if (entry.item.isSalvaged) continue;
@@ -482,7 +505,8 @@ export class SpaceEngine {
         const stretch = Math.max(0, currentDist - this.shipState.tetherLength);
         this.shipState.tetherTension = Math.min(1.0, stretch / 120);
 
-        if (stretch > 220) {
+        const maxStretch = 220 * (1 + this.upgrades.tetherTier * 0.30);
+        if (stretch > maxStretch) {
           this.cutTether();
           this.eventsQueue.push({ type: 'TETHER_CUT', message: 'TETHER SNAPPED UNDER EXCESS TENSION!' });
         }

@@ -346,7 +346,17 @@ export class SpaceView3D {
     this.scene.add(this.lockReticleGroup);
   }
 
+  private isScreenShakeEnabled = true;
+
+  public setScreenShakeEnabled(enabled: boolean): void {
+    this.isScreenShakeEnabled = enabled;
+    if (!enabled) {
+      this.screenShakeAmount = 0;
+    }
+  }
+
   public triggerShake(intensity: number): void {
+    if (!this.isScreenShakeEnabled) return;
     this.screenShakeAmount = Math.max(this.screenShakeAmount, intensity);
   }
 

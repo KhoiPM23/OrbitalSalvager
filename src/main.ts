@@ -1,5 +1,6 @@
 import { spaceAudio } from './audio/spaceAudio';
 import { SpaceEngine } from './physics/spaceEngine';
+import { ShipUpgrades } from './physics/types';
 import { SpaceView3D } from './renderer/spaceView3D';
 
 // DOM Elements
@@ -22,6 +23,28 @@ const intelCount = document.getElementById('intelCount') as HTMLElement;
 const modalBlackbox = document.getElementById('modalBlackbox') as HTMLElement;
 const btnBlackboxDismiss = document.getElementById('btnBlackboxDismiss') as HTMLButtonElement;
 const blackboxLogList = document.getElementById('blackboxLogList') as HTMLElement;
+
+const btnWorkshop = document.getElementById('btnWorkshop') as HTMLButtonElement;
+const modalWorkshop = document.getElementById('modalWorkshop') as HTMLElement;
+const btnCloseWorkshop = document.getElementById('btnCloseWorkshop') as HTMLButtonElement;
+const workshopCredits = document.getElementById('workshopCredits') as HTMLElement;
+const tierThruster = document.getElementById('tierThruster') as HTMLElement;
+const tierTether = document.getElementById('tierTether') as HTMLElement;
+const tierHull = document.getElementById('tierHull') as HTMLElement;
+const tierGyro = document.getElementById('tierGyro') as HTMLElement;
+const btnUpgradeThruster = document.getElementById('btnUpgradeThruster') as HTMLButtonElement;
+const btnUpgradeTether = document.getElementById('btnUpgradeTether') as HTMLButtonElement;
+const btnUpgradeHull = document.getElementById('btnUpgradeHull') as HTMLButtonElement;
+const btnUpgradeGyro = document.getElementById('btnUpgradeGyro') as HTMLButtonElement;
+
+const btnSettings = document.getElementById('btnSettings') as HTMLButtonElement;
+const modalSettings = document.getElementById('modalSettings') as HTMLElement;
+const btnCloseSettings = document.getElementById('btnCloseSettings') as HTMLButtonElement;
+const sliderMasterVol = document.getElementById('sliderMasterVol') as HTMLInputElement;
+const sliderMasterVolVal = document.getElementById('sliderMasterVolVal') as HTMLElement;
+const toggleHazardAlarm = document.getElementById('toggleHazardAlarm') as HTMLInputElement;
+const toggleScreenShake = document.getElementById('toggleScreenShake') as HTMLInputElement;
+const btnToggleFullscreen = document.getElementById('btnToggleFullscreen') as HTMLButtonElement;
 
 const radioCommBox = document.getElementById('radioCommBox') as HTMLElement;
 const radioCallsign = document.getElementById('radioCallsign') as HTMLElement;
@@ -61,13 +84,176 @@ const modalDefeat = document.getElementById('modalDefeat') as HTMLElement;
 const defeatReason = document.getElementById('defeatReason') as HTMLElement;
 const btnRetryDefeat = document.getElementById('btnRetryDefeat') as HTMLButtonElement;
 
+// Upgrades and Economy State
+let playerCredits = 500;
+try {
+  const savedCredits = localStorage.getItem('orbitalsalvager_credits');
+  if (savedCredits !== null) {
+    playerCredits = parseInt(savedCredits, 10) || 0;
+  }
+} catch {}
+
+let shipUpgrades: ShipUpgrades = {
+  thrusterTier: 0,
+  tetherTier: 0,
+  hullTier: 0,
+  gyroTier: 0
+};
+
+try {
+  const savedUpgrades = localStorage.getItem('orbitalsalvager_upgrades');
+  if (savedUpgrades) {
+    shipUpgrades = { ...shipUpgrades, ...JSON.parse(savedUpgrades) };
+  }
+} catch {}
+
+const UPGRADE_COSTS: Record<keyof ShipUpgrades, number[]> = {
+  thrusterTier: [500, 1200, 2500],
+  tetherTier: [400, 1000, 2200],
+  hullTier: [450, 1100, 2400],
+  gyroTier: [350, 900, 2000]
+};
+
 // Initialization
 const engine = new SpaceEngine(1200, 700, 0);
+engine.setShipUpgrades(shipUpgrades);
 const view = new SpaceView3D(canvas);
 
 let isGameRunning = false;
 let isPaused = false;
 const keys: Record<string, boolean> = {};
+
+function addCredits(amount: number): void {
+  playerCredits += amount;
+  try {
+    localStorage.setItem('orbitalsalvager_credits', String(playerCredits));
+  } catch {}
+  updateWorkshopUI();
+}
+
+function updateWorkshopUI(): void {
+  workshopCredits.textContent = playerCredits.toLocaleString();
+
+  // Thruster
+  tierThruster.textContent = `TIER ${shipUpgrades.thrusterTier} / 3`;
+  if (shipUpgrades.thrusterTier >= 3) {
+    btnUpgradeThruster.textContent = 'MAX SPECIFICATION';
+    btnUpgradeThruster.disabled = true;
+    btnUpgradeThruster.style.opacity = '0.6';
+  } else {
+    const cost = UPGRADE_COSTS.thrusterTier[shipUpgrades.thrusterTier];
+    btnUpgradeThruster.textContent = `UPGRADE [${cost} CR]`;
+    btnUpgradeThruster.disabled = playerCredits < cost;
+    btnUpgradeThruster.style.opacity = playerCredits < cost ? '0.5' : '1';
+  }
+
+  // Tether
+  tierTether.textContent = `TIER ${shipUpgrades.tetherTier} / 3`;
+  if (shipUpgrades.tetherTier >= 3) {
+    btnUpgradeTether.textContent = 'MAX SPECIFICATION';
+    btnUpgradeTether.disabled = true;
+    btnUpgradeTether.style.opacity = '0.6';
+  } else {
+    const cost = UPGRADE_COSTS.tetherTier[shipUpgrades.tetherTier];
+    btnUpgradeTether.textContent = `UPGRADE [${cost} CR]`;
+    btnUpgradeTether.disabled = playerCredits < cost;
+    btnUpgradeTether.style.opacity = playerCredits < cost ? '0.5' : '1';
+  }
+
+  // Hull
+  tierHull.textContent = `TIER ${shipUpgrades.hullTier} / 3`;
+  if (shipUpgrades.hullTier >= 3) {
+    btnUpgradeHull.textContent = 'MAX SPECIFICATION';
+    btnUpgradeHull.disabled = true;
+    btnUpgradeHull.style.opacity = '0.6';
+  } else {
+    const cost = UPGRADE_COSTS.hullTier[shipUpgrades.hullTier];
+    btnUpgradeHull.textContent = `UPGRADE [${cost} CR]`;
+    btnUpgradeHull.disabled = playerCredits < cost;
+    btnUpgradeHull.style.opacity = playerCredits < cost ? '0.5' : '1';
+  }
+
+  // Gyro
+  tierGyro.textContent = `TIER ${shipUpgrades.gyroTier} / 3`;
+  if (shipUpgrades.gyroTier >= 3) {
+    btnUpgradeGyro.textContent = 'MAX SPECIFICATION';
+    btnUpgradeGyro.disabled = true;
+    btnUpgradeGyro.style.opacity = '0.6';
+  } else {
+    const cost = UPGRADE_COSTS.gyroTier[shipUpgrades.gyroTier];
+    btnUpgradeGyro.textContent = `UPGRADE [${cost} CR]`;
+    btnUpgradeGyro.disabled = playerCredits < cost;
+    btnUpgradeGyro.style.opacity = playerCredits < cost ? '0.5' : '1';
+  }
+}
+
+function purchaseUpgrade(key: keyof ShipUpgrades): void {
+  const currentTier = shipUpgrades[key];
+  if (currentTier >= 3) return;
+  const cost = UPGRADE_COSTS[key][currentTier];
+  if (playerCredits < cost) return;
+
+  playerCredits -= cost;
+  shipUpgrades[key]++;
+  engine.setShipUpgrades(shipUpgrades);
+  try {
+    localStorage.setItem('orbitalsalvager_credits', String(playerCredits));
+    localStorage.setItem('orbitalsalvager_upgrades', JSON.stringify(shipUpgrades));
+  } catch {}
+  updateWorkshopUI();
+  updateTelemetry();
+  spaceAudio.playSalvageDocked();
+}
+
+function toggleWorkshop(): void {
+  const isHidden = modalWorkshop.classList.contains('hidden');
+  if (isHidden) {
+    modalSettings.classList.add('hidden');
+    modalBlackbox.classList.add('hidden');
+    modalBrief.classList.add('hidden');
+    modalPause.classList.add('hidden');
+    updateWorkshopUI();
+    modalWorkshop.classList.remove('hidden');
+  } else {
+    modalWorkshop.classList.add('hidden');
+  }
+}
+
+function toggleSettings(): void {
+  const isHidden = modalSettings.classList.contains('hidden');
+  if (isHidden) {
+    modalWorkshop.classList.add('hidden');
+    modalBlackbox.classList.add('hidden');
+    modalBrief.classList.add('hidden');
+    modalPause.classList.add('hidden');
+    modalSettings.classList.remove('hidden');
+  } else {
+    modalSettings.classList.add('hidden');
+  }
+}
+
+// Restore saved settings
+try {
+  const savedVol = localStorage.getItem('orbitalsalvager_volume');
+  if (savedVol !== null) {
+    const v = parseInt(savedVol, 10);
+    sliderMasterVol.value = String(v);
+    sliderMasterVolVal.textContent = `${v}%`;
+    spaceAudio.setMasterVolume(v / 100);
+  }
+  const savedAlarm = localStorage.getItem('orbitalsalvager_hazard_alarm');
+  if (savedAlarm !== null) {
+    const en = savedAlarm === 'true';
+    toggleHazardAlarm.checked = en;
+    spaceAudio.setHazardAlarmEnabled(en);
+  }
+  const savedShake = localStorage.getItem('orbitalsalvager_screenshake');
+  if (savedShake !== null) {
+    const en = savedShake === 'true';
+    toggleScreenShake.checked = en;
+    view.setScreenShakeEnabled(en);
+  }
+} catch {}
 
 function syncMissionUI(): void {
   const mission = engine.getCurrentMission();
@@ -89,13 +275,52 @@ function syncMissionUI(): void {
 }
 
 syncMissionUI();
+updateWorkshopUI();
 
 // Keyboard input
 window.addEventListener('keydown', (e) => {
   spaceAudio.ensureAudio();
 
-  // Pause
-  if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+  // Escape hierarchy
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (!modalWorkshop.classList.contains('hidden')) {
+      toggleWorkshop();
+      return;
+    }
+    if (!modalSettings.classList.contains('hidden')) {
+      toggleSettings();
+      return;
+    }
+    if (!modalBlackbox.classList.contains('hidden')) {
+      toggleBlackbox();
+      return;
+    }
+    if (!modalBrief.classList.contains('hidden')) {
+      modalBrief.classList.add('hidden');
+      isGameRunning = true;
+      return;
+    }
+    togglePause();
+    return;
+  }
+
+  // Workshop [U]
+  if (e.key === 'u' || e.key === 'U') {
+    e.preventDefault();
+    toggleWorkshop();
+    return;
+  }
+
+  // Settings [O]
+  if (e.key === 'o' || e.key === 'O') {
+    e.preventDefault();
+    toggleSettings();
+    return;
+  }
+
+  // Pause [P]
+  if (e.key === 'p' || e.key === 'P') {
     e.preventDefault();
     togglePause();
     return;
@@ -139,6 +364,8 @@ window.addEventListener('keydown', (e) => {
       modalWin.classList.add('hidden');
       modalDefeat.classList.add('hidden');
       modalAllComplete.classList.add('hidden');
+      modalWorkshop.classList.add('hidden');
+      modalSettings.classList.add('hidden');
       isGameRunning = true;
       syncMissionUI();
       return;
@@ -178,6 +405,8 @@ function handleReset(): void {
   modalDefeat.classList.add('hidden');
   modalAllComplete.classList.add('hidden');
   modalPause.classList.add('hidden');
+  modalWorkshop.classList.add('hidden');
+  modalSettings.classList.add('hidden');
   spaceAudio.stopThruster();
   syncMissionUI();
 }
@@ -239,12 +468,14 @@ const recoveredLogs: { name: string; ship: string; log: string; bounty: number }
 
 function recordSalvageLore(item: any): void {
   if (recoveredLogs.some(l => l.name === item.name)) return;
+  const bounty = item.bountyCredits || (item.scoreValue * 25);
   recoveredLogs.push({
     name: item.name,
     ship: item.derelictShip || 'Unregistered Derelict',
     log: item.loreLog || 'Telemetry damaged during orbit decay.',
-    bounty: item.bountyCredits || (item.scoreValue * 25)
+    bounty: bounty
   });
+  addCredits(bounty);
   intelCount.textContent = `LOGS: ${recoveredLogs.length}`;
   renderBlackboxList();
 }
@@ -273,6 +504,43 @@ function toggleBlackbox(): void {
 
 btnBlackbox.addEventListener('click', toggleBlackbox);
 btnBlackboxDismiss.addEventListener('click', toggleBlackbox);
+
+// Workshop wiring
+btnWorkshop.addEventListener('click', toggleWorkshop);
+btnCloseWorkshop.addEventListener('click', toggleWorkshop);
+btnUpgradeThruster.addEventListener('click', () => purchaseUpgrade('thrusterTier'));
+btnUpgradeTether.addEventListener('click', () => purchaseUpgrade('tetherTier'));
+btnUpgradeHull.addEventListener('click', () => purchaseUpgrade('hullTier'));
+btnUpgradeGyro.addEventListener('click', () => purchaseUpgrade('gyroTier'));
+
+// Settings wiring
+btnSettings.addEventListener('click', toggleSettings);
+btnCloseSettings.addEventListener('click', toggleSettings);
+
+sliderMasterVol.addEventListener('input', () => {
+  const val = parseInt(sliderMasterVol.value, 10);
+  sliderMasterVolVal.textContent = `${val}%`;
+  spaceAudio.setMasterVolume(val / 100);
+  try { localStorage.setItem('orbitalsalvager_volume', String(val)); } catch {}
+});
+
+toggleHazardAlarm.addEventListener('change', () => {
+  spaceAudio.setHazardAlarmEnabled(toggleHazardAlarm.checked);
+  try { localStorage.setItem('orbitalsalvager_hazard_alarm', toggleHazardAlarm.checked ? 'true' : 'false'); } catch {}
+});
+
+toggleScreenShake.addEventListener('change', () => {
+  view.setScreenShakeEnabled(toggleScreenShake.checked);
+  try { localStorage.setItem('orbitalsalvager_screenshake', toggleScreenShake.checked ? 'true' : 'false'); } catch {}
+});
+
+btnToggleFullscreen.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+});
 
 btnRestart.addEventListener('click', handleReset);
 btnAssist.addEventListener('click', toggleAssist);

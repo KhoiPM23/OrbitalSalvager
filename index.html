@@ -475,6 +475,8 @@
         </div>
 
         <div class="header-actions">
+          <button id="btnWorkshop" class="btn" style="border-color: #f59e0b; color: #f59e0b;" title="Shipyard Upgrades & Outfitting [U]"><span>🛠️ WORKSHOP [U]</span></button>
+          <button id="btnSettings" class="btn" style="border-color: #94a3b8; color: #cbd5e1;" title="Flight Telemetry & Configuration [O]"><span>⚙️ OPTIONS [O]</span></button>
           <button id="btnAssist" class="btn" title="Toggle Inertial Dampeners / Flight Assist"><span id="assistText">ASSIST: ON</span> <span class="key-tag">[X]</span></button>
           <button id="btnBlackbox" class="btn" title="View Recovered Flight Logs & Corporate Intel"><span id="intelCount">LOGS: 0</span> <span class="key-tag">[L]</span></button>
           <button id="btnMute" class="btn"><span id="muteLabel">SFX: ON</span> <span class="key-tag">[M]</span></button>
@@ -645,15 +647,174 @@
           </button>
         </div>
       </div>
+
+      <!-- Shipyard Workshop / Outfitting Modal -->
+      <div id="modalWorkshop" class="modal-backdrop hidden">
+        <div class="modal-box" style="border-color: #f59e0b; max-width: 680px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow-y: auto; text-align: left; box-shadow: 0 0 45px rgba(245, 158, 11, 0.25);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 12px;">
+            <div>
+              <div style="font-size: 10px; color: #f59e0b; letter-spacing: 2px; font-weight: 700;">DSSU DRYDOCK OUTFITTING</div>
+              <div class="modal-title" style="color: #f59e0b; font-size: 18px; margin: 0;">SALVAGE TUG WORKSHOP</div>
+            </div>
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 13px; color: #00ffaa; background: rgba(0, 255, 170, 0.1); border: 1px solid #00ffaa; padding: 4px 10px; border-radius: 4px;">
+              CREDITS: <span id="workshopCredits">0</span> CR
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <!-- Upgrade 1: Thrusters -->
+            <div style="background: rgba(13, 20, 34, 0.7); border: 1px solid #1e293b; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <strong style="color: #f1f5f9; font-size: 12px;">ION THRUSTER IMPELLER</strong>
+                  <span id="tierThruster" class="mission-badge" style="font-size: 9px; padding: 2px 6px;">TIER 0 / 3</span>
+                </div>
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                  Increases forward & retro thruster output by +20% per tier for rapid momentum adjustments.
+                </div>
+              </div>
+              <button id="btnUpgradeThruster" class="btn" style="background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; color: #f59e0b; font-size: 11px; padding: 5px 10px; justify-content: center; margin-top: 6px;">
+                UPGRADE [500 CR]
+              </button>
+            </div>
+
+            <!-- Upgrade 2: Tether -->
+            <div style="background: rgba(13, 20, 34, 0.7); border: 1px solid #1e293b; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <strong style="color: #f1f5f9; font-size: 12px;">CARBON-NANOTUBE TETHER</strong>
+                  <span id="tierTether" class="mission-badge" style="font-size: 9px; padding: 2px 6px;">TIER 0 / 3</span>
+                </div>
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                  Extends grapple latch range by +25% and reinforces cable tensile snap tolerance (+30%).
+                </div>
+              </div>
+              <button id="btnUpgradeTether" class="btn" style="background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; color: #f59e0b; font-size: 11px; padding: 5px 10px; justify-content: center; margin-top: 6px;">
+                UPGRADE [400 CR]
+              </button>
+            </div>
+
+            <!-- Upgrade 3: Hull -->
+            <div style="background: rgba(13, 20, 34, 0.7); border: 1px solid #1e293b; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <strong style="color: #f1f5f9; font-size: 12px;">REINFORCED NANITE HULL</strong>
+                  <span id="tierHull" class="mission-badge" style="font-size: 9px; padding: 2px 6px;">TIER 0 / 3</span>
+                </div>
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                  Expands maximum hull structural integrity by +25 HP per tier to survive high-speed debris impacts.
+                </div>
+              </div>
+              <button id="btnUpgradeHull" class="btn" style="background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; color: #f59e0b; font-size: 11px; padding: 5px 10px; justify-content: center; margin-top: 6px;">
+                UPGRADE [450 CR]
+              </button>
+            </div>
+
+            <!-- Upgrade 4: Gyro -->
+            <div style="background: rgba(13, 20, 34, 0.7); border: 1px solid #1e293b; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <strong style="color: #f1f5f9; font-size: 12px;">GYRO INERTIA DAMPENERS</strong>
+                  <span id="tierGyro" class="mission-badge" style="font-size: 9px; padding: 2px 6px;">TIER 0 / 3</span>
+                </div>
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                  Increases attitude turning agility (+20%) and boosts automated flight assist stabilization.
+                </div>
+              </div>
+              <button id="btnUpgradeGyro" class="btn" style="background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; color: #f59e0b; font-size: 11px; padding: 5px 10px; justify-content: center; margin-top: 6px;">
+                UPGRADE [350 CR]
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; padding-top: 10px;">
+            <span style="font-size: 11px; color: #64748b;">Salvage high-value debris to earn bounties for modular outfitting.</span>
+            <button id="btnCloseWorkshop" class="btn" style="background: #f59e0b; color: #04060a; font-weight: 900; padding: 8px 24px;">
+              RETURN TO COCKPIT [ESC / U]
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flight Options & Telemetry Configuration Modal -->
+      <div id="modalSettings" class="modal-backdrop hidden">
+        <div class="modal-box" style="border-color: #94a3b8; max-width: 580px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow-y: auto; text-align: left; box-shadow: 0 0 40px rgba(148, 163, 184, 0.2);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 12px;">
+            <div>
+              <div style="font-size: 10px; color: #00e5ff; letter-spacing: 2px; font-weight: 700;">FLIGHT TELEMETRY SYSTEM</div>
+              <div class="modal-title" style="color: #f1f5f9; font-size: 18px; margin: 0;">COCKPIT CONFIGURATION</div>
+            </div>
+            <span class="key-tag">DSSU v1.3.0</span>
+          </div>
+
+          <!-- Audio Controls -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: #00e5ff; font-weight: 700; margin-bottom: 8px; letter-spacing: 1px;">ACOUSTIC BALANCING</div>
+            <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(13, 20, 34, 0.6); padding: 12px; border-radius: 6px; border: 1px solid #1e293b;">
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                  <span>Master Volume:</span>
+                  <span id="sliderMasterVolVal" style="color: #00ffaa; font-family: monospace;">80%</span>
+                </div>
+                <input id="sliderMasterVol" type="range" min="0" max="100" value="80" style="width: 100%; cursor: pointer;">
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-top: 4px;">
+                <span>Proximity Hazard Klaxon Alarm:</span>
+                <input id="toggleHazardAlarm" type="checkbox" checked style="cursor: pointer; transform: scale(1.2);">
+              </div>
+            </div>
+          </div>
+
+          <!-- Display & Accessibility -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: #00e5ff; font-weight: 700; margin-bottom: 8px; letter-spacing: 1px;">DISPLAY & SENSORY</div>
+            <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(13, 20, 34, 0.6); padding: 12px; border-radius: 6px; border: 1px solid #1e293b;">
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+                <span>Impact Screen Shake:</span>
+                <input id="toggleScreenShake" type="checkbox" checked style="cursor: pointer; transform: scale(1.2);">
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-top: 4px;">
+                <span>Display Mode:</span>
+                <button id="btnToggleFullscreen" class="btn" style="padding: 4px 10px; font-size: 10px;">TOGGLE FULLSCREEN [F11]</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pilot Keybindings -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: #00e5ff; font-weight: 700; margin-bottom: 8px; letter-spacing: 1px;">PILOT KEYBINDINGS</div>
+            <div style="font-size: 11px; font-family: monospace; background: rgba(13, 20, 34, 0.6); border: 1px solid #1e293b; border-radius: 6px; padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div><span class="key-tag">W / ↑</span> Main Engine Thrust</div>
+              <div><span class="key-tag">A D / ← →</span> Attitude RCS Turn</div>
+              <div><span class="key-tag">S / ↓</span> Retro Velocity Brake</div>
+              <div><span class="key-tag">SPACE</span> Fire / Cut Tether</div>
+              <div><span class="key-tag">X</span> Flight Assist Toggle</div>
+              <div><span class="key-tag">U</span> Shipyard Workshop</div>
+              <div><span class="key-tag">L</span> Blackbox Flight Logs</div>
+              <div><span class="key-tag">O</span> Cockpit Options</div>
+              <div><span class="key-tag">R</span> Reset Sector Mission</div>
+              <div><span class="key-tag">P</span> Pause Simulation</div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; border-top: 1px solid #1e293b; padding-top: 10px;">
+            <button id="btnCloseSettings" class="btn" style="background: #00e5ff; color: #04060a; font-weight: 900; padding: 8px 24px;">
+              APPLY & RETURN [ESC / O]
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="controls-footer">
       <span>Thrust: <span class="key-tag">W</span> / <span class="key-tag">↑</span></span>
-      <span>RCS Turn: <span class="key-tag">A</span> <span class="key-tag">D</span> / <span class="key-tag">←</span> <span class="key-tag">→</span></span>
-      <span>Retro Brake: <span class="key-tag">S</span> / <span class="key-tag">↓</span></span>
+      <span>Turn: <span class="key-tag">A</span> <span class="key-tag">D</span></span>
+      <span>Brake: <span class="key-tag">S</span></span>
       <span>Dampeners: <span class="key-tag">X</span></span>
       <span>Grapple Tether: <span class="key-tag">SPACE</span></span>
-      <span>Contracts: <span class="key-tag">1..5</span></span>
+      <span>Workshop: <span class="key-tag">U</span></span>
+      <span>Logs: <span class="key-tag">L</span></span>
+      <span>Options: <span class="key-tag">O</span></span>
       <span>Reset: <span class="key-tag">R</span></span>
       <span>Pause: <span class="key-tag">P</span></span>
     </div>

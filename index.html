@@ -570,11 +570,16 @@
             </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
-            <button id="btnStartGame" class="btn" style="background: #00e5ff; color: #04060a; font-weight: 900; padding: 10px 32px; font-size: 13px;">
-              LAUNCH SALVAGE TUG
+          <div style="display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%;">
+            <button id="btnStartGame" class="btn" style="background: #00e5ff; color: #04060a; font-weight: 900; padding: 12px 32px; font-size: 13px; width: 100%; justify-content: center;">
+              LAUNCH SALVAGE TUG [SPACE / ENTER]
             </button>
-            <div class="level-select-grid">
+            <div style="display: flex; gap: 6px; width: 100%;">
+              <button id="btnTitleWorkshop" class="btn" style="flex: 1; justify-content: center; font-size: 11px; border-color: #f59e0b; color: #fbbf24;">WORKSHOP [U]</button>
+              <button id="btnTitleBlackbox" class="btn" style="flex: 1; justify-content: center; font-size: 11px; border-color: #a855f7; color: #c084fc;">LOGS [L]</button>
+              <button id="btnTitleSettings" class="btn" style="flex: 1; justify-content: center; font-size: 11px; border-color: #94a3b8; color: #cbd5e1;">OPTIONS [O]</button>
+            </div>
+            <div id="missionSelectContainer" class="level-select-grid" style="width: 100%;">
               <button class="btn-mission-item active" data-mission="0">1. Sector Alpha (Tutorial)</button>
               <button class="btn-mission-item" data-mission="1">2. Sector Beta (Asteroids)</button>
               <button class="btn-mission-item" data-mission="2">3. Sector Gamma (Heavy Core)</button>
@@ -587,64 +592,122 @@
 
       <!-- Victory / Mission Clear Modal -->
       <div id="modalWin" class="modal-backdrop hidden">
-        <div class="modal-box" style="border-color: #00ffaa;">
-          <div class="modal-title">SECTOR CLEAR // SALVAGE RETRIEVED</div>
-          <div class="modal-body">
-            <p style="font-size: 14px; color: #f1f5f9; margin-bottom: 6px;">All designated orbital debris successfully docked in Recovery Bay.</p>
+        <div class="modal-box" style="border-color: #00ffaa; max-width: 500px;">
+          <div style="font-size: 10px; color: #00ffaa; letter-spacing: 2px; font-weight: 700;">SALVAGE CONTRACT FULFILLED</div>
+          <div class="modal-title" style="color: #00ffaa; font-size: 20px; margin-top: 2px;">SECTOR CLEAR // SALVAGE RETRIEVED</div>
+          <div class="modal-body" style="width: 100%;">
+            <p style="font-size: 13px; color: #f1f5f9; margin-bottom: 8px;">All designated orbital debris successfully docked in Recovery Bay.</p>
 
-            <table class="metrics-table">
+            <table class="metrics-table" style="margin-bottom: 12px;">
               <tr><td>Operation Time:</td><td id="winTimeVal">0s</td></tr>
               <tr><td>Fuel Tank Reserve:</td><td id="winFuelVal">100%</td></tr>
               <tr><td>Hull Integrity:</td><td id="winHullVal">100%</td></tr>
-              <tr><td>Total Contract Bounty:</td><td id="winScoreText">0 PTS</td></tr>
+              <tr><td>Total Contract Bounty:</td><td id="winScoreText" style="color: #ffd700; font-weight: 700;">0 PTS</td></tr>
             </table>
           </div>
-          <button id="btnNextMission" class="btn" style="background: #00ffaa; color: #04060a; font-weight: 900; align-self: center; padding: 10px 28px; font-size: 12px;">
-            ACCEPT NEXT SALVAGE CONTRACT
+          <button id="btnNextMission" class="btn" style="background: #00ffaa; color: #04060a; font-weight: 900; align-self: center; padding: 10px 28px; font-size: 12px; width: 100%; justify-content: center;">
+            ACCEPT NEXT SALVAGE CONTRACT [SPACE]
           </button>
+          <div style="display: flex; gap: 8px; width: 100%; margin-top: 8px;">
+            <button id="btnWinRetry" class="btn" style="flex: 1; justify-content: center; border-color: #ffd700; color: #ffd700;">
+              RETRY FOR BOUNTY [R]
+            </button>
+            <button id="btnWinWorkshop" class="btn" style="flex: 1; justify-content: center; border-color: #f59e0b; color: #fbbf24;">
+              WORKSHOP [U]
+            </button>
+            <button id="btnWinMenu" class="btn" style="flex: 1; justify-content: center; border-color: #00e5ff; color: #00e5ff;">
+              CONTRACTS [M]
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Grand Master Completion Modal -->
       <div id="modalAllComplete" class="modal-backdrop hidden">
-        <div class="modal-box" style="border-color: #ffd700;">
-          <div class="modal-title" style="color: #ffd700;">ORBITAL MASTER SALVAGER</div>
-          <div class="modal-body" style="text-align: center;">
-            <p style="font-size: 15px; color: #f1f5f9; margin-bottom: 8px;">
-              All 5 high-risk orbital sectors have been cleared! From drifting antennas and runaway titanium reactor cores to navigating the chaotic gravitational slingshot of the Binary Pulsars, your master command of zero-g momentum, tether tension, and fuel budgeting is legendary.
-            </p>
-            <p id="grandScoreText" style="color: #ffd700; font-weight: 700; font-size: 18px;">CUMULATIVE BOUNTY: 0 PTS</p>
+        <div class="modal-box" style="border-color: #ffd700; max-width: 540px;">
+          <div style="font-size: 11px; color: #ffd700; letter-spacing: 2px; font-weight: 700;">ORBITAL SALVAGE GUILD // MASTER EXPEDITION ARCHIVE</div>
+          <div class="modal-title" style="color: #ffd700; font-size: 22px; margin: 4px 0 10px;">GRAND MASTER ORBITAL SALVAGER</div>
+          
+          <div style="background: rgba(10, 18, 30, 0.8); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 8px; padding: 14px; margin-bottom: 14px; width: 100%;">
+            <div style="text-align: center; margin-bottom: 10px;">
+              <div id="grandScoreText" style="font-size: 26px; color: #ffd700; font-weight: 700; letter-spacing: 2px; text-shadow: 0 0 16px rgba(255, 215, 0, 0.6);">CUMULATIVE BOUNTY: 0 PTS</div>
+              <div id="grandGuildRank" style="font-size: 12px; font-weight: 700; color: #00ffaa; letter-spacing: 1.5px; margin-top: 4px;">RANK: TITANIUM VOID RECLAIMER</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; border-top: 1px solid #1e293b; padding-top: 10px; text-align: left;">
+              <div style="color: #94a3b8;">SECTORS CLEARED: <b style="color: #00e5ff;">5 / 5 CONTRACTS</b></div>
+              <div style="color: #94a3b8;">TUG SHIP STATUS: <b style="color: #00ffaa;">COMMERCIAL GRADE</b></div>
+              <div style="color: #94a3b8;">BLACKBOX MANIFESTS: <b id="grandBlackboxCount" style="color: #c084fc;">3 / 3 DECRYPTED</b></div>
+              <div style="color: #94a3b8;">PILOT SAFETY RATING: <b style="color: #ffd700;">CLASS A+ MASTER</b></div>
+            </div>
           </div>
-          <button id="btnReplayAll" class="btn" style="background: #ffd700; color: #04060a; font-weight: 900; align-self: center; padding: 10px 28px;">
-            REPLAY CONTRACTS FROM SECTOR 1
-          </button>
+
+          <div class="modal-body" style="font-size: 12px; color: #94a3b8; line-height: 1.6; margin-bottom: 16px; text-align: left;">
+            From drifting solar arrays and runaway titanium reactor cores to navigating the chaotic gravitational slingshot of the Binary Pulsars, your mastery of zero-g momentum, tether tension, and thruster budgeting is recorded in the Guild Annals.
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            <button id="btnReplayAll" class="btn" style="background: #ffd700; color: #04060a; font-weight: 900; justify-content: center; padding: 10px 24px;">
+              REPLAY CONTRACTS FROM SECTOR 1
+            </button>
+            <div style="display: flex; gap: 8px; width: 100%;">
+              <button id="btnGrandWorkshop" class="btn" style="flex: 1; justify-content: center; border-color: #f59e0b; color: #fbbf24;">
+                WORKSHOP [U]
+              </button>
+              <button id="btnGrandToMenu" class="btn" style="flex: 1; justify-content: center; border-color: #00e5ff; color: #00e5ff;">
+                CONTRACTS [M]
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Pause Modal -->
+      <!-- Pause Modal with Full Action Ladder -->
       <div id="modalPause" class="modal-backdrop hidden">
-        <div class="modal-box" style="border-color: #38bdf8;">
-          <div class="modal-title" style="color: #38bdf8;">ORBITAL FLIGHT PAUSED</div>
-          <div class="modal-body" style="text-align: center;">
-            Thruster simulation and Matter.js rigid-body physics suspended. Press [P] or click below to resume.
+        <div class="modal-box" style="border-color: #38bdf8; max-width: 440px;">
+          <div style="font-size: 10px; color: #38bdf8; letter-spacing: 2px; font-weight: 700;">ORBITAL TELEMETRY SUSPENDED</div>
+          <div class="modal-title" style="color: #38bdf8; font-size: 20px; margin: 2px 0 8px;">FLIGHT SUSPENDED</div>
+          <div class="modal-body" style="font-size: 12px; color: #94a3b8; margin-bottom: 16px;">
+            Thruster simulation and Matter.js rigid-body physics frozen. Select an action:
           </div>
-          <button id="btnResumeGame" class="btn" style="background: #38bdf8; color: #04060a; font-weight: 900; align-self: center; padding: 10px 24px;">
-            RESUME FLIGHT
-          </button>
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            <button id="btnResumeGame" class="btn" style="background: #38bdf8; color: #04060a; font-weight: 900; justify-content: center; padding: 10px 24px;">
+              RESUME FLIGHT [P / ESC]
+            </button>
+            <button id="btnPauseRestart" class="btn" style="justify-content: center; border-color: #ffd700; color: #ffd700;">
+              RESTART SECTOR [R]
+            </button>
+            <button id="btnPauseWorkshop" class="btn" style="justify-content: center; border-color: #f59e0b; color: #fbbf24;">
+              SHIPYARD WORKSHOP [U]
+            </button>
+            <button id="btnPauseSettings" class="btn" style="justify-content: center; border-color: #94a3b8; color: #cbd5e1;">
+              COCKPIT OPTIONS [O]
+            </button>
+            <button id="btnPauseBlackbox" class="btn" style="justify-content: center; border-color: #a855f7; color: #c084fc;">
+              BLACKBOX LOGS [L]
+            </button>
+            <button id="btnPauseToMenu" class="btn" style="justify-content: center; border-color: #ef4444; color: #f87171;">
+              ABORT TO CONTRACT BRIEFING [M]
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Failure Modal -->
       <div id="modalDefeat" class="modal-backdrop hidden">
-        <div class="modal-box" style="border-color: #ff4444;">
+        <div class="modal-box" style="border-color: #ff4444; max-width: 440px;">
           <div class="modal-title" style="color: #ff4444;">MISSION FAILED</div>
           <div class="modal-body" style="text-align: center;">
             <p id="defeatReason" style="font-size: 15px; color: #f87171; margin-bottom: 8px;">Hull compromised!</p>
             <p style="color: #64748b; font-size: 12px;">Your recovery tug was lost in deep space. Reset sector to retry.</p>
           </div>
-          <button id="btnRetryDefeat" class="btn" style="background: #ff4444; color: #04060a; font-weight: 900; align-self: center; padding: 10px 28px;">
-            RETRY SECTOR [R]
-          </button>
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            <button id="btnRetryDefeat" class="btn" style="background: #ff4444; color: #04060a; font-weight: 900; justify-content: center; padding: 10px 28px;">
+              RETRY SECTOR [R]
+            </button>
+            <button id="btnDefeatMenu" class="btn" style="justify-content: center; border-color: #94a3b8; color: #cbd5e1;">
+              ABORT TO CONTRACTS [M]
+            </button>
+          </div>
         </div>
       </div>
 

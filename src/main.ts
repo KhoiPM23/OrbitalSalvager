@@ -76,13 +76,32 @@ const winHullVal = document.getElementById('winHullVal') as HTMLElement;
 const winScoreText = document.getElementById('winScoreText') as HTMLElement;
 const btnNextMission = document.getElementById('btnNextMission') as HTMLButtonElement;
 
+const btnWinRetry = document.getElementById('btnWinRetry') as HTMLButtonElement | null;
+const btnWinWorkshop = document.getElementById('btnWinWorkshop') as HTMLButtonElement | null;
+const btnWinMenu = document.getElementById('btnWinMenu') as HTMLButtonElement | null;
+
 const modalAllComplete = document.getElementById('modalAllComplete') as HTMLElement;
 const grandScoreText = document.getElementById('grandScoreText') as HTMLElement;
+const grandGuildRank = document.getElementById('grandGuildRank') as HTMLElement | null;
+const grandBlackboxCount = document.getElementById('grandBlackboxCount') as HTMLElement | null;
 const btnReplayAll = document.getElementById('btnReplayAll') as HTMLButtonElement;
+const btnGrandWorkshop = document.getElementById('btnGrandWorkshop') as HTMLButtonElement | null;
+const btnGrandToMenu = document.getElementById('btnGrandToMenu') as HTMLButtonElement | null;
 
 const modalDefeat = document.getElementById('modalDefeat') as HTMLElement;
 const defeatReason = document.getElementById('defeatReason') as HTMLElement;
 const btnRetryDefeat = document.getElementById('btnRetryDefeat') as HTMLButtonElement;
+const btnDefeatMenu = document.getElementById('btnDefeatMenu') as HTMLButtonElement | null;
+
+const btnTitleWorkshop = document.getElementById('btnTitleWorkshop') as HTMLButtonElement | null;
+const btnTitleBlackbox = document.getElementById('btnTitleBlackbox') as HTMLButtonElement | null;
+const btnTitleSettings = document.getElementById('btnTitleSettings') as HTMLButtonElement | null;
+
+const btnPauseRestart = document.getElementById('btnPauseRestart') as HTMLButtonElement | null;
+const btnPauseWorkshop = document.getElementById('btnPauseWorkshop') as HTMLButtonElement | null;
+const btnPauseSettings = document.getElementById('btnPauseSettings') as HTMLButtonElement | null;
+const btnPauseBlackbox = document.getElementById('btnPauseBlackbox') as HTMLButtonElement | null;
+const btnPauseToMenu = document.getElementById('btnPauseToMenu') as HTMLButtonElement | null;
 
 // Upgrades and Economy State
 let playerCredits = 500;
@@ -205,6 +224,84 @@ function purchaseUpgrade(key: keyof ShipUpgrades): void {
   spaceAudio.playSalvageDocked();
 }
 
+function closeAllModals(): void {
+  modalBrief.classList.add('hidden');
+  modalWin.classList.add('hidden');
+  modalAllComplete.classList.add('hidden');
+  modalPause.classList.add('hidden');
+  modalDefeat.classList.add('hidden');
+  modalWorkshop.classList.add('hidden');
+  modalSettings.classList.add('hidden');
+  modalBlackbox.classList.add('hidden');
+}
+
+function getMissionRecords(): Record<number, number> {
+  try {
+    const raw = localStorage.getItem('orbitalsalvager_mission_scores');
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveMissionRecord(missionIdx: number, score: number): void {
+  try {
+    const records = getMissionRecords();
+    if (!records[missionIdx] || score > records[missionIdx]) {
+      records[missionIdx] = score;
+      localStorage.setItem('orbitalsalvager_mission_scores', JSON.stringify(records));
+    }
+  } catch {}
+}
+
+function updateMissionSelectBadges(): void {
+  const records = getMissionRecords();
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.btn-mission-item');
+  const baseNames = [
+    '1. Sector Alpha (Tutorial)',
+    '2. Sector Beta (Asteroids)',
+    '3. Sector Gamma (Heavy Core)',
+    '4. Sector Delta (Singularity)',
+    '5. Sector Epsilon (Binary Pulsars)'
+  ];
+  buttons.forEach(btn => {
+    const idx = parseInt(btn.dataset.mission || btn.getAttribute('data-mission') || '0', 10);
+    const best = records[idx];
+    const baseName = baseNames[idx] || `Sector ${idx + 1}`;
+    if (best && best > 0) {
+      btn.innerHTML = `${baseName} <span style="color: #ffd700; margin-left: 4px;">[${best} PTS]</span>`;
+    } else {
+      btn.textContent = baseName;
+    }
+  });
+}
+
+function updateGrandCampaignModal(): void {
+  const records = getMissionRecords();
+  let totalBounty = 0;
+  for (let i = 0; i < engine.getTotalMissions(); i++) {
+    totalBounty += records[i] || 0;
+  }
+  if (grandScoreText) {
+    grandScoreText.textContent = `CUMULATIVE BOUNTY: ${totalBounty} PTS`;
+  }
+  if (grandGuildRank) {
+    if (totalBounty >= 12000) {
+      grandGuildRank.textContent = 'RANK: TITANIUM VOID RECLAIMER (MAX)';
+      grandGuildRank.style.color = '#00ffaa';
+    } else if (totalBounty >= 8000) {
+      grandGuildRank.textContent = 'RANK: SENIOR CONTRACT SALVAGER';
+      grandGuildRank.style.color = '#00e5ff';
+    } else {
+      grandGuildRank.textContent = 'RANK: CERTIFIED VOID WRECKER';
+      grandGuildRank.style.color = '#ffd700';
+    }
+  }
+  if (grandBlackboxCount) {
+    grandBlackboxCount.textContent = `${recoveredLogs.length} / 3 DECRYPTED`;
+  }
+}
+
 function toggleWorkshop(): void {
   const isHidden = modalWorkshop.classList.contains('hidden');
   if (isHidden) {
@@ -280,6 +377,139 @@ updateWorkshopUI();
 // Keyboard input
 window.addEventListener('keydown', (e) => {
   spaceAudio.ensureAudio();
+
+  // Modal-specific hotkey handling
+  if (!modalPause.classList.contains('hidden')) {
+    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+      e.preventDefault();
+      togglePause();
+      return;
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      modalPause.classList.add('hidden');
+      isPaused = false;
+      engine.setPaused(false);
+      pauseLabel.textContent = 'PAUSE';
+      handleReset();
+      return;
+    }
+    if (e.key === 'u' || e.key === 'U') {
+      e.preventDefault();
+      toggleWorkshop();
+      return;
+    }
+    if (e.key === 'o' || e.key === 'O') {
+      e.preventDefault();
+      toggleSettings();
+      return;
+    }
+    if (e.key === 'l' || e.key === 'L') {
+      e.preventDefault();
+      toggleBlackbox();
+      return;
+    }
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      closeAllModals();
+      modalBrief.classList.remove('hidden');
+      updateMissionSelectBadges();
+      return;
+    }
+    return;
+  }
+
+  if (!modalWin.classList.contains('hidden')) {
+    if (e.code === 'Space' || e.key === 'Enter') {
+      e.preventDefault();
+      modalWin.classList.add('hidden');
+      const hasNext = engine.nextMission();
+      if (hasNext) syncMissionUI();
+      return;
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      modalWin.classList.add('hidden');
+      handleReset();
+      return;
+    }
+    if (e.key === 'u' || e.key === 'U') {
+      e.preventDefault();
+      toggleWorkshop();
+      return;
+    }
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      closeAllModals();
+      modalBrief.classList.remove('hidden');
+      updateMissionSelectBadges();
+      return;
+    }
+    return;
+  }
+
+  if (!modalDefeat.classList.contains('hidden')) {
+    if (e.key === 'r' || e.key === 'R' || e.code === 'Space' || e.key === 'Enter') {
+      e.preventDefault();
+      handleReset();
+      return;
+    }
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      closeAllModals();
+      modalBrief.classList.remove('hidden');
+      updateMissionSelectBadges();
+      return;
+    }
+    return;
+  }
+
+  if (!modalAllComplete.classList.contains('hidden')) {
+    if (e.code === 'Space' || e.key === 'Enter') {
+      e.preventDefault();
+      modalAllComplete.classList.add('hidden');
+      engine.loadMission(0);
+      syncMissionUI();
+      return;
+    }
+    if (e.key === 'u' || e.key === 'U') {
+      e.preventDefault();
+      toggleWorkshop();
+      return;
+    }
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      closeAllModals();
+      modalBrief.classList.remove('hidden');
+      updateMissionSelectBadges();
+      return;
+    }
+    return;
+  }
+
+  if (!modalBrief.classList.contains('hidden')) {
+    if (e.code === 'Space' || e.key === 'Enter') {
+      e.preventDefault();
+      modalBrief.classList.add('hidden');
+      isGameRunning = true;
+      return;
+    }
+    if (e.key === 'u' || e.key === 'U') {
+      e.preventDefault();
+      toggleWorkshop();
+      return;
+    }
+    if (e.key === 'o' || e.key === 'O') {
+      e.preventDefault();
+      toggleSettings();
+      return;
+    }
+    if (e.key === 'l' || e.key === 'L') {
+      e.preventDefault();
+      toggleBlackbox();
+      return;
+    }
+  }
 
   // Escape hierarchy
   if (e.key === 'Escape') {
@@ -542,13 +772,62 @@ btnToggleFullscreen.addEventListener('click', () => {
   }
 });
 
-btnRestart.addEventListener('click', handleReset);
-btnAssist.addEventListener('click', toggleAssist);
-btnMute.addEventListener('click', toggleMute);
-btnPause.addEventListener('click', togglePause);
-btnResumeGame.addEventListener('click', togglePause);
+btnRestart.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  handleReset();
+});
+btnAssist.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleAssist();
+});
+btnMute.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleMute();
+});
+btnPause.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  togglePause();
+});
+btnResumeGame.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  togglePause();
+});
+
+btnPauseRestart?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  modalPause.classList.add('hidden');
+  isPaused = false;
+  engine.setPaused(false);
+  pauseLabel.textContent = 'PAUSE';
+  handleReset();
+});
+
+btnPauseWorkshop?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleWorkshop();
+});
+
+btnPauseSettings?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleSettings();
+});
+
+btnPauseBlackbox?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleBlackbox();
+});
+
+btnPauseToMenu?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  closeAllModals();
+  modalBrief.classList.remove('hidden');
+  updateMissionSelectBadges();
+  isPaused = true;
+  engine.setPaused(true);
+});
 
 btnNextMission.addEventListener('click', () => {
+  spaceAudio.playUIClick();
   modalWin.classList.add('hidden');
   const hasNext = engine.nextMission();
   if (hasNext) {
@@ -556,23 +835,77 @@ btnNextMission.addEventListener('click', () => {
   }
 });
 
+btnWinRetry?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  modalWin.classList.add('hidden');
+  handleReset();
+});
+
+btnWinWorkshop?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleWorkshop();
+});
+
+btnWinMenu?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  closeAllModals();
+  modalBrief.classList.remove('hidden');
+  updateMissionSelectBadges();
+});
+
 btnReplayAll.addEventListener('click', () => {
+  spaceAudio.playUIClick();
   modalAllComplete.classList.add('hidden');
   engine.loadMission(0);
   syncMissionUI();
 });
 
-btnRetryDefeat.addEventListener('click', handleReset);
+btnGrandWorkshop?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleWorkshop();
+});
+
+btnGrandToMenu?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  closeAllModals();
+  modalBrief.classList.remove('hidden');
+  updateMissionSelectBadges();
+});
+
+btnRetryDefeat.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  handleReset();
+});
+
+btnDefeatMenu?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  closeAllModals();
+  modalBrief.classList.remove('hidden');
+  updateMissionSelectBadges();
+});
+
+btnTitleWorkshop?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleWorkshop();
+});
+
+btnTitleBlackbox?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleBlackbox();
+});
+
+btnTitleSettings?.addEventListener('click', () => {
+  spaceAudio.playUIClick();
+  toggleSettings();
+});
 
 // Mission selection buttons
 document.querySelectorAll('.btn-mission-item').forEach(el => {
   el.addEventListener('click', (e) => {
+    spaceAudio.playUIClick();
     const idx = parseInt((e.currentTarget as HTMLElement).getAttribute('data-mission') || '0', 10);
     engine.loadMission(idx);
-    modalBrief.classList.add('hidden');
-    modalWin.classList.add('hidden');
-    modalDefeat.classList.add('hidden');
-    modalAllComplete.classList.add('hidden');
+    closeAllModals();
     isGameRunning = true;
     syncMissionUI();
   });
@@ -643,11 +976,14 @@ function updateTelemetry(): void {
     winHullVal.textContent = `${metrics.hullRemaining}%`;
     winScoreText.textContent = `${metrics.score} PTS`;
 
+    saveMissionRecord(engine.getMissionIndex(), metrics.score);
+    updateMissionSelectBadges();
+
     if (engine.getMissionIndex() < engine.getTotalMissions() - 1) {
       modalWin.classList.remove('hidden');
     } else {
+      updateGrandCampaignModal();
       modalAllComplete.classList.remove('hidden');
-      grandScoreText.textContent = `CUMULATIVE BOUNTY: ${metrics.score} PTS`;
     }
     spaceAudio.playSalvageDocked();
   } else if (status === 'DESTROYED' && modalDefeat.classList.contains('hidden')) {
@@ -868,4 +1204,6 @@ function frameLoop(time: number): void {
   requestAnimationFrame(frameLoop);
 }
 
+// Initialize mission select badges
+updateMissionSelectBadges();
 requestAnimationFrame(frameLoop);
